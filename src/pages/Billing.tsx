@@ -974,21 +974,13 @@ export default function Billing() {
     const masterListsBillingRef = React.useRef<any[]>([]);
 
     const filteredBillingDetails = React.useMemo(() => {
-        const term = billingSearch.trim().toLowerCase();
-        if (!term) {
-            const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
-            const unselectedOptions = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id));
-            return [...selectedOptions, ...unselectedOptions];
-        }
-        const matches = (opt: BillingDetailOption) =>
-            (opt.billing_details || '').toLowerCase().includes(term) ||
-            (opt.billing_group_name || '').toLowerCase().includes(term) ||
-            (opt.billing_subgroup_name || '').toLowerCase().includes(term);
-
-        const selectedFiltered = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id) && matches(opt));
-        const unselectedFiltered = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id) && matches(opt));
-        return [...selectedFiltered, ...unselectedFiltered];
-    }, [billingDetailsOptions, billingSearch, selectedBillingDetailIds]);
+        // Always pass ALL options to AddBillingPopup — search/filter is handled inside the popup.
+        // Previously, this was pre-filtering by billingSearch which caused Total to drop to 0
+        // when no results matched (effectiveOptions became empty, so totalSelectedFees = 0).
+        const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
+        const unselectedOptions = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id));
+        return [...selectedOptions, ...unselectedOptions];
+    }, [billingDetailsOptions, selectedBillingDetailIds]);
 
     // Consolidate data fetching and matching to prevent race conditions
     useEffect(() => {
@@ -1330,12 +1322,13 @@ export default function Billing() {
                             return sum + Number(fee);
                         }, 0);
 
-                        console.log('Calculated total fees:', totalFees.toFixed(2));
+                        console.log('Calculated total fees from matched IDs:', totalFees.toFixed(2));
                         setBillingData(prev => ({
                             ...prev,
-                            // Only update billed if it wasn't already manually set? 
-                            // Actually, if we are loading fresh, we should trust the calculated fees especially if they come from master lists.
-                            billed: totalFees > 0 ? totalFees.toFixed(2) : prev.billed
+                            // CRITICAL: Always sync the 'billed' field with the actual selected checkboxes on load
+                            // This prevents the discrepancy where the main screen shows 1500 but popup shows 700
+                            billed: totalFees.toFixed(2),
+                            dues: (totalFees - (parseFloat(prev.discount) || 0)).toFixed(2)
                         }));
                     }
                 }
@@ -1747,30 +1740,15 @@ export default function Billing() {
     // Memoized callback to handle total fees changes from AddBillingPopup
     // Memoized callback to handle total fees changes from AddBillingPopup
     const handleTotalFeesChange = useCallback((totalFees: number) => {
-        // Update Billed input based on currently selected checkboxes
-        // This updates dynamically as user checks/unchecks items
-        const totalFeesFixed = totalFees.toFixed(2);
-        // setTotalSelectedFees(totalFees); // Removed
+        // Validation only: Check if discount exceeds the total fees in the popup
+        const discountNum = parseFloat(billingData.discount) || 0;
 
-        // Update billed field with current selection total (not cumulative)
-        setBillingData(prev => {
-            const discountNum = parseFloat(prev.discount) || 0;
-
-            // Validate discount against new billed amount
-            if (discountNum > totalFees) {
-                setDiscountError('Discount cannot be greater than billed amount');
-            } else {
-                setDiscountError(null);
-            }
-
-            const acBal = Math.max(0, totalFees - discountNum);
-            return {
-                ...prev,
-                billed: totalFeesFixed,
-                dues: acBal.toFixed(2)
-            };
-        });
-    }, []);
+        if (discountNum > totalFees && totalFees > 0) {
+            setDiscountError('Discount cannot be greater than billed amount');
+        } else {
+            setDiscountError(null);
+        }
+    }, [billingData.discount]);
 
     const handlePrintReceiptSubmit = (values: PrintReceiptFormValues) => {
         setBillingData(prev => ({
@@ -2562,6 +2540,38 @@ export default function Billing() {
 
     // Generic treatment handler for both save and submit
     const handleTreatmentAction = async (isSubmit: boolean) => {
+        // Block action if there are active validation errors
+        if (billingError) {
+            setSnackbarMessage(billingError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (discountError) {
+            setSnackbarMessage(discountError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (reasonError) {
+            setSnackbarMessage(reasonError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (collectedError) {
+            setSnackbarMessage(collectedError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (paymentByError) {
+            setSnackbarMessage(paymentByError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (paymentRemarkError) {
+            setSnackbarMessage(paymentRemarkError);
+            setSnackbarOpen(true);
+            return;
+        }
+
         try {
             const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
 
@@ -4589,7 +4599,11 @@ export default function Billing() {
                 sx={{
                     zIndex: 99999, // Ensure snackbar appears above everything
                     '& .MuiSnackbarContent-root': {
-                        backgroundColor: snackbarMessage.toLowerCase().includes('error') || snackbarMessage.toLowerCase().includes('failed') ? '#f44336' : '#4caf50',
+                        backgroundColor:
+                            snackbarMessage.toLowerCase().includes('error') ||
+                                snackbarMessage.toLowerCase().includes('failed') ||
+                                snackbarMessage.toLowerCase().includes('discount') ||
+                                snackbarMessage.toLowerCase().includes('greater than') ? '#f44336' : '#4caf50',
                         color: 'white',
                         fontWeight: 'bold'
                     }
