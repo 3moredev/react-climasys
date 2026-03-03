@@ -1876,6 +1876,10 @@ export default function Billing() {
                                     followUp: Boolean(fuFlag)
                                 }
                             }));
+                            // If it's a follow-up, set the type to '2' (Follow-up)
+                            if (Boolean(fuFlag)) {
+                                setFollowUpData(prev => ({ ...prev, followUpType: '2' }));
+                            }
                         }
                     }
 
@@ -1996,22 +2000,32 @@ export default function Billing() {
 
         // Check if there's any previous visit with statusId === 5 (Complete)
         const hasCompletedVisit = allVisits.some((visit: any) => {
-            const statusId = visit?.statusId ?? visit?.status_id ?? visit?.Status_Id;
+            const statusId = visit?.statusId ?? visit?.status_id ?? visit?.Status_Id ?? visit?.Status_ID;
             return Number(statusId) === 5;
         });
 
+        // Use Follow_Up_Flag from latest visit if available, otherwise fallback to hasCompletedVisit
+        const latestVisit = allVisits[allVisits.length - 1];
+        const apiFuFlag = latestVisit ? (latestVisit.Follow_Up_Flag ?? latestVisit.Follow_Up_flag ?? latestVisit.follow_up_flag) : undefined;
+        
+        const isFollowUp = apiFuFlag !== undefined ? Boolean(apiFuFlag) : hasCompletedVisit;
+
         setFormData(prev => {
-            if (prev.visitType.followUp !== hasCompletedVisit) {
+            if (prev.visitType.followUp !== isFollowUp) {
                 return {
                     ...prev,
                     visitType: {
                         ...prev.visitType,
-                        followUp: hasCompletedVisit
+                        followUp: isFollowUp
                     }
                 };
             }
             return prev;
         });
+        
+        if (isFollowUp) {
+            setFollowUpData(prev => ({ ...prev, followUpType: '2' }));
+        }
     }, [allVisits]);
 
 
