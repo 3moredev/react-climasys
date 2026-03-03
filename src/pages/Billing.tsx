@@ -143,6 +143,7 @@ interface PreviousVisit {
     type: string;
     patientName: string;
     doctorName: string;
+    followUpDate?: string;
     isActive?: boolean;
 }
 
@@ -1872,6 +1873,7 @@ export default function Billing() {
                         type: getVisitType(visit),
                         patientName: treatmentData?.patientName || '',
                         doctorName: getDoctorName(visit),
+                        followUpDate: visit.follow_up_date || visit.Follow_Up_Date || '',
                         isActive: index === sortedVisits.length - 1 // Make the latest visit active
                     };
                 });
@@ -1882,7 +1884,22 @@ export default function Billing() {
                 // Extract prescriptions from the latest visit
                 if (sortedVisits.length > 0) {
                     const latestVisit = sortedVisits[sortedVisits.length - 1];
-                    console.log('Latest visit for prescription extraction:', latestVisit);
+                    console.log('Latest visit for data extraction:', latestVisit);
+
+                    // Extract follow up flag from latest visit
+                    if (latestVisit) {
+                        const fuFlag = latestVisit.Follow_Up_Flag ?? latestVisit.Follow_Up_flag ?? latestVisit.follow_up_flag;
+                        if (fuFlag !== undefined) {
+                            console.log('DEBUG: Billing fetchPreviousVisits Follow_Up_Flag:', fuFlag);
+                            setFormData(prev => ({
+                                ...prev,
+                                visitType: {
+                                    ...prev.visitType,
+                                    followUp: Boolean(fuFlag)
+                                }
+                            }));
+                        }
+                    }
 
                     // Extract prescriptions using the same logic as mapPreviousVisitToInitialData
                     const rxArray = ((): any[] => {
@@ -2670,9 +2687,9 @@ export default function Billing() {
                 surgicalHistory: formData.surgicalHistory,
                 menstrualAddComments: '',
                 followUpComment: followUpData.followUp,
-                followUpDate: new Date().toISOString().slice(0, 19),
+                followUpDate: followUpData.followUpDate || new Date().toISOString().slice(0, 19),
                 pregnant: false,
-                edd: new Date().toISOString().slice(0, 19),
+                edd: followUpData.fud || new Date().toISOString().slice(0, 19),
                 followUpType: followUpData.followUpType ? String(followUpData.followUpType).charAt(0) : '0', // Single character: first char of followUpType or '0'
 
                 // Financial fields
@@ -4062,7 +4079,7 @@ export default function Billing() {
                                         size="small"
                                         disabled
                                         disableClearable
-                                        value={formatDateDdMmmYy(followUpData.followUpDate) || '-'}
+                                        value={followUpData.followUpDate ? formatVisitDate(followUpData.followUpDate) : '-'}
                                         onChange={() => { }}
                                         sx={{
                                             '& .MuiInputBase-root': {
