@@ -422,8 +422,10 @@ export default function Treatment() {
 
     // Billing popup state
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
-    // Snapshot of selectedBillingDetailIds when popup opens, used to restore on cancel
+    // Snapshot of billing selections and values when popup opens, used to restore on cancel
     const billingSnapshotRef = React.useRef<string[]>([]);
+    const billingAmountSnapshotRef = React.useRef<string>('0.00');
+    const billingDuesSnapshotRef = React.useRef<string>('0.00');
     const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([]);
 
     // Accounts popup state
@@ -8672,8 +8674,10 @@ export default function Treatment() {
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    // Snapshot current selections before opening so cancel can restore them
+                                                    // Snapshot current state before opening so cancel can restore it
                                                     billingSnapshotRef.current = [...selectedBillingDetailIds];
+                                                    billingAmountSnapshotRef.current = billingData.billed;
+                                                    billingDuesSnapshotRef.current = billingData.dues;
                                                     setShowBillingPopup(true);
                                                 }}
                                                 title="Add billed item"
@@ -9321,8 +9325,13 @@ export default function Treatment() {
             <AddBillingPopup
                 open={showBillingPopup}
                 onClose={() => {
-                    // Cancel: restore selections to what they were when popup opened
+                    // Cancel: restore everything to what it was when popup opened
                     setSelectedBillingDetailIds(() => billingSnapshotRef.current);
+                    setBillingData(prev => ({
+                        ...prev,
+                        billed: billingAmountSnapshotRef.current,
+                        dues: billingDuesSnapshotRef.current
+                    }));
                     setBillingSearch('');
                     setShowBillingPopup(false);
                 }}
@@ -9331,8 +9340,10 @@ export default function Treatment() {
                     if (isFormDisabled) {
                         return;
                     }
-                    // Submitted: update snapshot so cancel later doesn't revert
+                    // Submitted: update snapshots so cancel later (if reopened) doesn't revert to old state
                     billingSnapshotRef.current = [...selectedBillingDetailIds];
+                    billingAmountSnapshotRef.current = billedNum.toFixed(2);
+                    billingDuesSnapshotRef.current = acBal.toFixed(2);
                     setBillingData(prev => {
                         const discountNum = parseFloat(prev.discount) || 0;
                         const billedNum = Number(totalAmount) || 0;
@@ -9348,15 +9359,22 @@ export default function Treatment() {
                     if (isFormDisabled) {
                         return;
                     }
-                    const billedNumForVal = Number(total) || 0;
+                    const billedNum = Number(total) || 0;
                     const discountNum = parseFloat(billingData.discount) || 0;
 
                     let newError: string | null = null;
-                    if (discountNum > 0 && discountNum > billedNumForVal) {
+                    if (discountNum > 0 && discountNum > billedNum) {
                         newError = 'Discount cannot be greater than billed amount';
                     }
                     setDiscountError(newError);
-                    // Removed setBillingData call to prevent "direct adding" before submit
+
+                    // Update the Billed (Rs)* field in real-time so default selections show immediately
+                    const acBal = Math.max(0, billedNum - discountNum);
+                    setBillingData(prev => ({
+                        ...prev,
+                        billed: billedNum.toFixed(2),
+                        dues: acBal.toFixed(2)
+                    }));
                 }}
                 billingSearch={billingSearch}
                 setBillingSearch={setBillingSearch}
