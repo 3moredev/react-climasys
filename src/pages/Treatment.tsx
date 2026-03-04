@@ -1916,12 +1916,21 @@ export default function Treatment() {
                     const duesRs = uiFields.duesRs ?? uiFields.dues ?? 0;
                     const acBalanceRs = uiFields.acBalanceRs ?? uiFields.acBalance ?? 0;
 
-                    setBillingData({
-                        billed: String(billedRs),
-                        discount: String(discountRs),
-                        collected: String(collectedRs),
-                        dues: String(duesRs),
-                        acBalance: String(acBalanceRs)
+                    setBillingData(prev => {
+                        const currentBilled = parseFloat(prev.billed) || 0;
+                        const useServerBilled = billedRs > 0 || currentBilled === 0;
+                        const finalBilled = useServerBilled ? billedRs : currentBilled;
+
+                        // Recalculate dues based on the final billed amount
+                        const finalDues = useServerBilled ? duesRs : Math.max(0, finalBilled - discountRs - collectedRs);
+
+                        return {
+                            billed: finalBilled !== 0 ? finalBilled.toFixed(2) : '',
+                            discount: String(discountRs),
+                            collected: String(collectedRs),
+                            dues: finalDues.toFixed(2),
+                            acBalance: String(acBalanceRs)
+                        };
                     });
 
                     // Mark that billing data has been set from master-lists
@@ -9340,14 +9349,17 @@ export default function Treatment() {
                     if (isFormDisabled) {
                         return;
                     }
+
+                    const discountNum = parseFloat(billingData.discount) || 0;
+                    const billedNum = Number(totalAmount) || 0;
+                    const acBal = Math.max(0, billedNum - discountNum);
+
                     // Submitted: update snapshots so cancel later (if reopened) doesn't revert to old state
                     billingSnapshotRef.current = [...selectedBillingDetailIds];
                     billingAmountSnapshotRef.current = billedNum.toFixed(2);
                     billingDuesSnapshotRef.current = acBal.toFixed(2);
+
                     setBillingData(prev => {
-                        const discountNum = parseFloat(prev.discount) || 0;
-                        const billedNum = Number(totalAmount) || 0;
-                        const acBal = Math.max(0, billedNum - discountNum);
                         return {
                             ...prev,
                             billed: billedNum.toFixed(2),
