@@ -1220,10 +1220,10 @@ export default function Billing() {
                             const prescription = medicineName
                                 ? (brandName ? `${medicineName}(${brandName})` : medicineName)
                                 : (brandName || fallbackPrescription);
-                            const b = safeToStr(p?.b ?? p?.morning ?? p?.Morning ?? '');
-                            const l = safeToStr(p?.l ?? p?.afternoon ?? p?.Afternoon ?? '');
-                            const d = safeToStr(p?.d ?? p?.night ?? p?.Night ?? '');
-                            const days = safeToStr(p?.days ?? p?.no_of_days ?? p?.noOfDays ?? p?.duration ?? '');
+                            const b = safeToStr(p?.b ?? p?.morning ?? p?.Morning ?? '0');
+                            const l = safeToStr(p?.l ?? p?.afternoon ?? p?.Afternoon ?? '0');
+                            const d = safeToStr(p?.d ?? p?.night ?? p?.Night ?? '0');
+                            const days = safeToStr(p?.days ?? p?.no_of_days ?? p?.noOfDays ?? p?.duration ?? '0');
                             const instruction = safeToStr(p?.instruction ?? p?.Instructions ?? '');
                             return { id: `${prefix}_${idx}`, prescription, b, l, d, days, instruction };
                         };

@@ -3902,10 +3902,10 @@ export default function Treatment() {
                             short_description: shortDesc,
                             morning: morning,
                             afternoon: afternoon,
-                            b: String(morning || ''),
-                            l: String(afternoon || ''),
-                            d: String(night || ''),
-                            days: String(days || ''),
+                            b: (morning !== undefined && morning !== null) ? String(morning) : '0',
+                            l: (afternoon !== undefined && afternoon !== null) ? String(afternoon) : '0',
+                            d: (night !== undefined && night !== null) ? String(night) : '0',
+                            days: (days !== undefined && days !== null && days !== '') ? String(days) : '0',
                             instruction: instruction,
                             priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
                         };
@@ -3939,10 +3939,10 @@ export default function Treatment() {
                     const mappedPrescriptionRows: PrescriptionRow[] = prescriptionSource.map((row: any, index: number) => ({
                         id: `pres-${index}-${Date.now()}`,
                         prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || row.medicine_description || row.short_description || '',
-                        b: String(row.b || row.morning || ''),
-                        l: String(row.l || row.afternoon || ''),
-                        d: String(row.d || row.night || ''),
-                        days: String(row.days || row.no_of_days || ''),
+                        b: (row.b !== undefined && row.b !== null) ? String(row.b) : (row.morning !== undefined && row.morning !== null ? String(row.morning) : '0'),
+                        l: (row.l !== undefined && row.l !== null) ? String(row.l) : (row.afternoon !== undefined && row.afternoon !== null ? String(row.afternoon) : '0'),
+                        d: (row.d !== undefined && row.d !== null) ? String(row.d) : (row.night !== undefined && row.night !== null ? String(row.night) : '0'),
+                        days: (row.days !== undefined && row.days !== null && row.days !== '') ? String(row.days) : (row.no_of_days !== undefined && row.no_of_days !== null && row.no_of_days !== '' ? String(row.no_of_days) : '0'),
                         instruction: row.instruction || ''
                     }));
                     setPrescriptionRows(mappedPrescriptionRows);
@@ -4665,10 +4665,10 @@ export default function Treatment() {
                                 short_description: shortDesc,
                                 morning: morning,
                                 afternoon: afternoon,
-                                b: String(morning || ''),
-                                l: String(afternoon || ''),
-                                d: String(night || ''),
-                                days: String(days || ''),
+                                b: (morning !== undefined && morning !== null) ? String(morning) : '0',
+                                l: (afternoon !== undefined && afternoon !== null) ? String(afternoon) : '0',
+                                d: (night !== undefined && night !== null) ? String(night) : '0',
+                                days: (days !== undefined && days !== null && days !== '') ? String(days) : '0',
                                 instruction: instruction,
                                 priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
                             };
@@ -4700,10 +4700,10 @@ export default function Treatment() {
                         const mappedPrescriptionRows: PrescriptionRow[] = prescriptionSource.map((row: any, index: number) => ({
                             id: `pres-${index}-${Date.now()}`,
                             prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || row.medicine_description || row.short_description || '',
-                            b: String(row.b || row.morning || ''),
-                            l: String(row.l || row.afternoon || ''),
-                            d: String(row.d || row.night || ''),
-                            days: String(row.days || row.no_of_days || ''),
+                            b: (row.b !== undefined && row.b !== null) ? String(row.b) : (row.morning !== undefined && row.morning !== null ? String(row.morning) : '0'),
+                            l: (row.l !== undefined && row.l !== null) ? String(row.l) : (row.afternoon !== undefined && row.afternoon !== null ? String(row.afternoon) : '0'),
+                            d: (row.d !== undefined && row.d !== null) ? String(row.d) : (row.night !== undefined && row.night !== null ? String(row.night) : '0'),
+                            days: (row.days !== undefined && row.days !== null && row.days !== '') ? String(row.days) : (row.no_of_days !== undefined && row.no_of_days !== null && row.no_of_days !== '' ? String(row.no_of_days) : '0'),
                             instruction: row.instruction || ''
                         }));
                         setPrescriptionRows(mappedPrescriptionRows);
