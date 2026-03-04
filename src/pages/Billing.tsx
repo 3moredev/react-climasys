@@ -1136,16 +1136,16 @@ export default function Billing() {
                                     if (matchedOption) fuTypeId = matchedOption.id;
                                 }
                                 if (!fuTypeId) {
-                                    fuTypeId = (uiFields?.followUpType ?? vitals.follow_up_type ?? '') as any;
+                                    fuTypeId = (uiFields?.followUpType ?? vitals.follow_up_type ?? vitals.Follow_Up_Type ?? '') as any;
                                 }
-                                const fuDate = (uiFields?.followUpDate ?? vitals.follow_up_date ?? '') as any;
+                                const fuDate = (uiFields?.followUpDate ?? uiFields?.Follow_Up_Date ?? vitals.follow_up_date ?? vitals.Follow_Up_Date ?? '') as any;
                                 setFollowUpData(prev => ({
                                     ...prev,
-                                    followUpType: fuTypeId ? String(fuTypeId) : prev.followUpType,
-                                    followUp: vitals.follow_up_comment !== undefined ? String(vitals.follow_up_comment) : prev.followUp,
+                                    followUpType: fuTypeId ? String(fuTypeId) : (vitals.follow_up_type ?? vitals.Follow_Up_Type ?? prev.followUpType),
+                                    followUp: (vitals.follow_up_comment ?? vitals.Follow_Up ?? prev.followUp),
                                     followUpDate: fuDate ? String(fuDate) : prev.followUpDate,
                                     planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv,
-                                    fud: vitals.follow_up_type !== undefined ? String(vitals.follow_up_type) : prev.fud
+                                    fud: (vitals.follow_up_type ?? vitals.Follow_Up_Type ?? prev.fud)
                                 }));
 
                                 // Billing Fields from master list
@@ -2007,7 +2007,7 @@ export default function Billing() {
         // Use Follow_Up_Flag from latest visit if available, otherwise fallback to hasCompletedVisit
         const latestVisit = allVisits[allVisits.length - 1];
         const apiFuFlag = latestVisit ? (latestVisit.Follow_Up_Flag ?? latestVisit.Follow_Up_flag ?? latestVisit.follow_up_flag) : undefined;
-        
+
         const isFollowUp = apiFuFlag !== undefined ? Boolean(apiFuFlag) : hasCompletedVisit;
 
         setFormData(prev => {
@@ -2022,7 +2022,7 @@ export default function Billing() {
             }
             return prev;
         });
-        
+
         if (isFollowUp) {
             setFollowUpData(prev => ({ ...prev, followUpType: '2' }));
         }
@@ -2132,7 +2132,13 @@ export default function Billing() {
     const formatVisitDate = (dateString: string): string => {
         if (!dateString) return 'N/A';
         try {
-            const date = new Date(dateString);
+            // Normalize: If it includes 'T' (ISO) but no timezone/offset info, treat as UTC
+            // If it already has +00:00 or Z, new Date() will parse it correctly.
+            let normalized = dateString;
+            if (dateString.includes('T') && !dateString.includes('Z') && !dateString.includes('+')) {
+                normalized = `${dateString}Z`;
+            }
+            const date = new Date(normalized);
             if (isNaN(date.getTime())) return dateString; // Return original if invalid
             return date.toLocaleDateString('en-GB', {
                 day: '2-digit',
@@ -2148,7 +2154,12 @@ export default function Billing() {
     const formatPastServiceDate = (dateString: string): string => {
         if (!dateString) return 'N/A';
         try {
-            const date = new Date(dateString);
+            // Apply same UTC normalization as formatVisitDate
+            let normalized = dateString;
+            if (dateString.includes('T') && !dateString.includes('Z') && !dateString.includes('+')) {
+                normalized = `${dateString}Z`;
+            }
+            const date = new Date(normalized);
             if (isNaN(date.getTime())) return dateString;
             const day = String(date.getDate()).padStart(2, '0');
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
