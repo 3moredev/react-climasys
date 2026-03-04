@@ -3707,8 +3707,15 @@ export default function Billing() {
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
                                             <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
-                                                {['Sr.', 'Complaint Description', 'Duration / Comment'].map(h => (
-                                                    <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: 'white', textAlign: 'left' }}>{h}</th>
+                                                {['Sr.', 'Complaint Description', 'Duration / Comment'].map((h, i) => (
+                                                    <th key={h} style={{
+                                                        padding: 8,
+                                                        borderBottom: '1px solid #e0e0e0',
+                                                        borderRight: i < 2 ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                                                        fontSize: 12,
+                                                        color: 'white',
+                                                        textAlign: 'left'
+                                                    }}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -3719,8 +3726,8 @@ export default function Billing() {
                                                 </tr>
                                             ) : mlComplaints.map((c, idx) => (
                                                 <tr key={`c_${idx}`}>
-                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
-                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{c.label}</td>
+                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', borderRight: '1px solid #e0e0e0', fontSize: 12 }}>{idx + 1}</td>
+                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', borderRight: '1px solid #e0e0e0', fontSize: 12 }}>{c.label}</td>
                                                     <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{c.comment}</td>
                                                 </tr>
                                             ))}
@@ -3762,8 +3769,15 @@ export default function Billing() {
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
                                             <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
-                                                {['Sr.', 'Provisional Diagnosis'].map(h => (
-                                                    <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
+                                                {['Sr.', 'Provisional Diagnosis'].map((h, i) => (
+                                                    <th key={h} style={{
+                                                        padding: 8,
+                                                        borderBottom: '1px solid #e0e0e0',
+                                                        borderRight: i === 0 ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                                                        fontSize: 12,
+                                                        color: '#fff',
+                                                        textAlign: 'left'
+                                                    }}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -3774,7 +3788,7 @@ export default function Billing() {
                                                 </tr>
                                             ) : mlDiagnosis.map((d, idx) => (
                                                 <tr key={`d_${idx}`}>
-                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
+                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', borderRight: '1px solid #e0e0e0', fontSize: 12 }}>{idx + 1}</td>
                                                     <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{d.label}</td>
                                                 </tr>
                                             ))}
@@ -3945,6 +3959,7 @@ export default function Billing() {
                                                         padding: '6px',
                                                         textAlign: 'left',
                                                         borderBottom: '1px solid #ddd',
+                                                        borderRight: '1px solid rgba(255,255,255,0.3)',
                                                         fontWeight: '600',
                                                         color: 'white',
                                                         width: '50px'
@@ -3955,6 +3970,7 @@ export default function Billing() {
                                                         padding: '6px',
                                                         textAlign: 'left',
                                                         borderBottom: '1px solid #ddd',
+                                                        borderRight: '1px solid rgba(255,255,255,0.3)',
                                                         fontWeight: '600',
                                                         color: 'white',
                                                         width: '200px'
@@ -3978,6 +3994,7 @@ export default function Billing() {
                                                         <td style={{
                                                             padding: '6px',
                                                             borderBottom: '1px solid #eee',
+                                                            borderRight: '1px solid #eee',
                                                             color: '#666',
                                                             fontSize: '12px',
                                                             textAlign: 'left'
@@ -3987,6 +4004,7 @@ export default function Billing() {
                                                         <td style={{
                                                             padding: '6px',
                                                             borderBottom: '1px solid #eee',
+                                                            borderRight: '1px solid #eee',
                                                             color: '#666',
                                                             fontSize: '12px',
                                                             textAlign: 'left'
@@ -4018,8 +4036,15 @@ export default function Billing() {
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
-                                            {['Sr.', 'Suggested Tests'].map(h => (
-                                                <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
+                                            {['Sr.', 'Suggested Tests'].map((h, i) => (
+                                                <th key={h} style={{
+                                                    padding: 8,
+                                                    borderBottom: '1px solid #e0e0e0',
+                                                    borderRight: i === 0 ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                                                    fontSize: 12,
+                                                    color: '#fff',
+                                                    textAlign: 'left'
+                                                }}>{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -4030,7 +4055,7 @@ export default function Billing() {
                                             </tr>
                                         ) : mlTestsTable.map((t, idx) => (
                                             <tr key={`${t}_${idx}`} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', borderRight: '1px solid #e0e0e0', fontSize: 12 }}>{idx + 1}</td>
                                                 <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{t}</td>
                                             </tr>
                                         ))}
