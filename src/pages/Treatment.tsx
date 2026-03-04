@@ -422,6 +422,8 @@ export default function Treatment() {
 
     // Billing popup state
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
+    // Snapshot of selectedBillingDetailIds when popup opens, used to restore on cancel
+    const billingSnapshotRef = React.useRef<string[]>([]);
     const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([]);
 
     // Accounts popup state
@@ -1798,22 +1800,15 @@ export default function Treatment() {
     const [billingSearch, setBillingSearch] = useState('');
     const billingRef = React.useRef<HTMLDivElement | null>(null);
 
+    // NOTE: Do NOT filter billingDetailsOptions by search term here.
+    // AddBillingPopup handles search/filtering internally via computedFiltered.
+    // If we pass a pre-filtered list, selected items outside the search result get
+    // excluded from effectiveOptions, causing totalSelectedFees to become 0 on search.
     const filteredBillingDetails = React.useMemo(() => {
-        const term = billingSearch.trim().toLowerCase();
-        if (!term) {
-            const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
-            const unselectedOptions = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id));
-            return [...selectedOptions, ...unselectedOptions];
-        }
-        const matches = (opt: BillingDetailOption) =>
-            (opt.billing_details || '').toLowerCase().includes(term) ||
-            (opt.billing_group_name || '').toLowerCase().includes(term) ||
-            (opt.billing_subgroup_name || '').toLowerCase().includes(term);
-
-        const selectedFiltered = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id) && matches(opt));
-        const unselectedFiltered = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id) && matches(opt));
-        return [...selectedFiltered, ...unselectedFiltered];
-    }, [billingDetailsOptions, billingSearch, selectedBillingDetailIds]);
+        const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
+        const unselectedOptions = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id));
+        return [...selectedOptions, ...unselectedOptions];
+    }, [billingDetailsOptions, selectedBillingDetailIds]);
 
     useEffect(() => {
         let cancelled = false;
@@ -8676,7 +8671,11 @@ export default function Treatment() {
                                             />
                                             <button
                                                 type="button"
-                                                onClick={() => setShowBillingPopup(true)}
+                                                onClick={() => {
+                                                    // Snapshot current selections before opening so cancel can restore them
+                                                    billingSnapshotRef.current = [...selectedBillingDetailIds];
+                                                    setShowBillingPopup(true);
+                                                }}
                                                 title="Add billed item"
                                                 className="fixed-icon-btn"
                                                 style={{
@@ -9321,12 +9320,19 @@ export default function Treatment() {
 
             <AddBillingPopup
                 open={showBillingPopup}
-                onClose={() => setShowBillingPopup(false)}
+                onClose={() => {
+                    // Cancel: restore selections to what they were when popup opened
+                    setSelectedBillingDetailIds(() => billingSnapshotRef.current);
+                    setBillingSearch('');
+                    setShowBillingPopup(false);
+                }}
                 isFormDisabled={isFormDisabled}
                 onSubmit={(totalAmount) => {
                     if (isFormDisabled) {
                         return;
                     }
+                    // Submitted: update snapshot so cancel later doesn't revert
+                    billingSnapshotRef.current = [...selectedBillingDetailIds];
                     setBillingData(prev => {
                         const discountNum = parseFloat(prev.discount) || 0;
                         const billedNum = Number(totalAmount) || 0;
