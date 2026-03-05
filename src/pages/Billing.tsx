@@ -4214,8 +4214,9 @@ export default function Billing() {
                                             style={{
                                                 position: 'absolute',
                                                 right: 6,
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
+                                                top: 0,
+                                                bottom: 0,
+                                                margin: 'auto',
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
