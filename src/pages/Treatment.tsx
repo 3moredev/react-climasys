@@ -1484,14 +1484,36 @@ export default function Treatment() {
         if (!treatmentData?.status) return true; // Default to true if no status
 
         const status = String(treatmentData.status).trim().toUpperCase();
+        const statusId = Number(treatmentData.statusId);
+
         const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
 
-        // Fallback logic (matching backend implementation)
-        if (normalizedStatus === 'CONSULT ON CALL' || (normalizedStatus !== 'WAITING' && normalizedStatus !== 'WITH DOCTOR')) {
+        // "In-Person" should be false only for specific teleconsult statuses
+        if (normalizedStatus === 'CONSULT ON CALL') {
             return false;
         }
+
+        // Return true if status is WAITING, WITH DOCTOR, or related to Prescription/Complete
+        // (Matching logic from isAddendumEnabled)
+        const isWaitingOrWithDoctor = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR';
+        const isWaitingForMedicine = normalizedStatus.startsWith('WAITING FOR MEDICINE') ||
+            normalizedStatus.startsWith('WAITINGFOR MEDICINE') ||
+            normalizedStatus.startsWith('WAITINGFORMEDICINE') ||
+            normalizedStatus.startsWith('PRESCRIPTION/COLLECTION') ||
+            statusId === 4;
+        const isComplete = normalizedStatus.startsWith('COMPLETE') ||
+            normalizedStatus.startsWith('COMPLETED') ||
+            normalizedStatus.startsWith('SUBMITTED') ||
+            normalizedStatus.startsWith('COLLECTION') ||
+            [5, 6, 10].includes(statusId);
+
+        if (isWaitingOrWithDoctor || isWaitingForMedicine || isComplete) {
+            return true;
+        }
+
+        // Default to true for any other status unless it's explicitly 'CONSULT ON CALL'
         return true;
-    }, [treatmentData?.status, treatmentData?.inPerson]);
+    }, [treatmentData?.status, treatmentData?.inPerson, treatmentData?.statusId]);
 
     // Determine if In-Person checkbox should be disabled based on status
     const inPersonDisabled = React.useMemo(() => {
