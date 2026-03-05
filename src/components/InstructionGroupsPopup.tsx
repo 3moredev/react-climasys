@@ -162,7 +162,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
             );
           })
           .map(group => group.id);
-        
+
         setSelectedGroupIds(matchedIds);
       }
     }
@@ -258,7 +258,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     if (onChange) onChange(finalGroups);
 
     // Show success message before closing
-    setErrorMessage('Instructions added successfully');
+    setErrorMessage('Instructions updated successfully.');
     setSnackbarSeverity('success');
     setShowSnackbar(true);
 
