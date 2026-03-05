@@ -100,6 +100,7 @@ export const buildPrescriptionPrintHTML = ({
                 font-size: 14px;
                 margin: 10px 0;
                 line-height: 1.8;
+                font-family:'Times New Roman', serif;
             }
             .medical-details {
                 font-size: 16px;
@@ -177,24 +178,41 @@ export const buildPrescriptionPrintHTML = ({
                 font-size: 12px;
                 line-height: 1.6;
             }
-                .patient-header{
-                margin-bottom:2px;
+             .patient-header{
+    margin-bottom:2px;
     display:flex;
     justify-content:space-between;
     align-items:center;
-    width:100%;
+    font-family:'Times New Roman', serif;
+    font-size:14px;
+}
+.patient-left span{
+    margin-right:4px;
+}
+.patient-name{
+    font-weight:bold;
 }
 
-.patient-left{
-    display:flex;
-    gap:5px;
-    align-items:center;
+.patient-id{
+    font-weight:bold;
 }
-
+.patient-gap{
+    margin-left:20px;
+}
 
 
 .patient-date{
     white-space:nowrap;
+}
+
+.medical-section{
+    font-family: "Times New Roman", serif;
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+.medical-details{
+    font-weight: bold;
 }
         </style>
     </head>
@@ -205,14 +223,16 @@ export const buildPrescriptionPrintHTML = ({
         
         <div class="horizontal-line"></div>
         
-<div class="patient-header" style="margin-bottom:2px;">
+<div class="patient-header">
     
     <div class="patient-left">
         <span>Name:</span>
-        <span class="patient-info-line1">${patientInfo.name}</span>
-        <span style="margin-left:10px;">${patientInfo.gender} / ${patientInfo.age} </span>
-        <span style="margin-left:10px;">Id:</span>
-        <span class="patient-info-line1">${patientInfo.patientId}</span>
+        <span class="patient-name">${patientInfo.name}</span>
+
+        <span class="patient-gap">${patientInfo.gender} / ${patientInfo.age}</span>
+
+        <span class="patient-gap">Id:</span>
+        <span class="patient-id">${patientInfo.patientId}</span>
     </div>
 
     <div class="patient-date">
@@ -221,16 +241,17 @@ export const buildPrescriptionPrintHTML = ({
 
 </div>
 
-<div class="patient-info-line2" style="margin-top:0;">
+<div class="patient-info-line2">
     Contact Number: ${patientInfo.contact}, 
-    Weight (Kg): ${patientInfo.weight} 
-    Height (Cm): ${patientInfo.height} 
+    Weight (Kg): ${patientInfo.weight}, 
+    Height (Cm): ${patientInfo.height}, 
     BMI: ${patientInfo.bmi}
 </div>
         <div class="horizontal-line"></div>
 
-        <div>
-        <span class="medical-details">Complaint:</span> <span>${medicalDetails.complaints}</span><br/>
+       <div class="medical-section">
+
+<span class="medical-details">Complaint:</span> <span>${medicalDetails.complaints}</span><br/>
 
 <span class="medical-details">Examination Finding:</span> <span>${medicalDetails.examinationFindings}</span><br/>
 
@@ -241,8 +262,8 @@ export const buildPrescriptionPrintHTML = ({
 <span class="medical-details">BP:</span> <span>${medicalDetails.bp}</span><br/>
 
 <span class="medical-details">Sugar:</span> <span>${medicalDetails.sugar}</span>
-        </div>
 
+</div>
         <div class="prescription-section">
             <strong>Rx:</strong>
             ${prescriptionTableHTML}
@@ -305,6 +326,7 @@ export const buildLabTestsPrintHTML = ({
             .patient-info-line2 {
                 font-size: 14px;
                 margin: 10px 0;
+                font-family:'Times New Roman', serif;
                 line-height: 1.8;
             }
         </style>
