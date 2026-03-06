@@ -2107,9 +2107,11 @@ export default function Treatment() {
                 const todaysVisitDate = new Date().toISOString().slice(0, 10);
                 const resp: any = await patientService.getPreviousServiceVisitDates({
                     patientId: String(treatmentData.patientId),
+                    doctorId: String(sessionData.doctorId),
                     clinicId: String(sessionData.clinicId),
                     todaysVisitDate
                 });
+                console.log("Past Services Data from API:", resp);
                 if (cancelled) return;
                 // Extract visitDate from visits array (priority: resp.visits)
                 let dates: string[] = [];
@@ -5399,7 +5401,7 @@ export default function Treatment() {
                     {/* Left Sidebar - Previous Visits and Attachments */}
                     <div style={{
                         width: '240px',
-                        backgroundColor: '#f8f9fa',
+                        backgroundColor: '#f5f5f5',
                         borderRight: '1px solid #dee2e6',
                         display: 'flex',
                         flexDirection: 'column',
@@ -5436,7 +5438,7 @@ export default function Treatment() {
                                             style={{
                                                 padding: '10px 15px',
                                                 borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                backgroundColor: '#f5f5f5 ',
                                                 cursor: 'pointer',
                                                 fontSize: '13px',
                                                 transition: 'background-color 0.2s ease'
@@ -5446,7 +5448,7 @@ export default function Treatment() {
                                                 e.currentTarget.style.backgroundColor = '#eeeeee';
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
+                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f5f5f5 ' : 'white';
                                             }}
                                         >
                                             <div style={{ fontWeight: '500', color: '#333' }}>
@@ -5737,7 +5739,7 @@ export default function Treatment() {
                             <div style={{
                                 marginBottom: '15px',
                                 padding: '0',
-                                backgroundColor: '#f8f9fa',
+                                backgroundColor: '#f5f5f5',
                                 borderRadius: '4px'
                             }}>
                                 <div style={{
@@ -6358,7 +6360,7 @@ export default function Treatment() {
                                             <tbody>
                                                 {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                                     <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        backgroundColor: '#f5f5f5',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="px-3">{index + 1}</td>
@@ -7066,7 +7068,7 @@ export default function Treatment() {
                                             <tbody>
                                                 {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                                     <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        backgroundColor: '#f5f5f5',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
@@ -7412,7 +7414,7 @@ export default function Treatment() {
                                             <tbody>
                                                 {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                                     <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        backgroundColor: '#f5f5f5',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{index + 1}</td>
@@ -7669,7 +7671,7 @@ export default function Treatment() {
                                                     height: '38px',
                                                     borderRadius: '6px',
                                                     fontSize: '13px',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : '#ffffff',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5!important' : '#ffffff',
                                                     '& fieldset': {
                                                         borderColor: '#B7B7B7',
                                                         borderWidth: '2px'
@@ -7871,7 +7873,7 @@ export default function Treatment() {
                                             <tbody>
                                                 {prescriptionRows.map((row, index) => (
                                                     <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        backgroundColor: '#f5f5f5',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{index + 1}</td>
@@ -8456,7 +8458,7 @@ export default function Treatment() {
                                             <tbody>
                                                 {investigationRows.map((row, index) => (
                                                     <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        backgroundColor: '#f5f5f5',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
@@ -8772,7 +8774,7 @@ export default function Treatment() {
                                                         borderRadius: '4px',
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
+                                                        backgroundColor: isFormDisabled ? '#f5f5f5!important' : 'white'
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         color: isFormDisabled ? '#666' : '#333',
@@ -8803,7 +8805,7 @@ export default function Treatment() {
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
                                                     height: '38px',
-                                                    backgroundColor: '#f5f5f5'
+                                                    backgroundColor: '#f5f5f5!important'
                                                 },
                                                 '& .MuiInputBase-input': {
                                                     color: '#666',
@@ -8841,7 +8843,7 @@ export default function Treatment() {
                                                         borderRadius: '4px',
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#f5f5f5',
+                                                        backgroundColor: '#f5f5f5!important',
                                                         paddingRight: folderAmountData?.totalAcBalance !== undefined &&
                                                             folderAmountData?.totalAcBalance !== null &&
                                                             folderAmountData?.rows &&

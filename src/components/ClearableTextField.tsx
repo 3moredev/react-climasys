@@ -66,7 +66,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                 marginBottom: '0px', // Removed fixed margin since helper text now takes space
                 '& .MuiInputBase-root': {
                     paddingRight: '6px !important',
-                    backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
+                    backgroundColor: isReadOnly ? '#f5f5f5!important' : 'inherit',
                     cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
                 },
                 '& .MuiOutlinedInput-notchedOutline': {

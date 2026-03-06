@@ -919,16 +919,16 @@ export const patientService = {
    */
   async getPreviousServiceVisitDates(params: {
     patientId: string;
-    // doctorId: string;
+    doctorId?: string;
     clinicId: string;
     todaysVisitDate?: string;
   }): Promise<PreviousServiceVisitDatesResponse> {
     try {
-      const { patientId, clinicId, todaysVisitDate } = params;
+      const { patientId, doctorId, clinicId, todaysVisitDate } = params;
       console.log('Fetching previous service visit dates:', params);
       const query = {
         patientId,
-        // doctorId,
+        doctorId,
         clinicId,
         ...(todaysVisitDate ? { todaysVisitDate } : {})
       } as Record<string, string>;
