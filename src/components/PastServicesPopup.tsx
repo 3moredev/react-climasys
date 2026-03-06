@@ -119,29 +119,24 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                 };
                 const targetDate = normalize(date);
 
-                try {
-                    const visitsResp: any = await patientService.getPatientPreviousVisitsWithDetails(patientId, targetDate);
-                    const visits: any[] = Array.isArray(visitsResp?.visits) ? visitsResp.visits : [];
-                    const match = visits.find(v => normalize(v.visit_date) === targetDate);
-                    visitNo = match?.patient_visit_no ?? match?.visit_number;
-                    shiftId = match?.shift_id as number | undefined;
-                } catch (e: any) {
-                    // Fallback on 404: use previous-visit-dates endpoint
-                    const datesResp: any = await patientService.getPreviousServiceVisitDates({
-                        patientId: String(patientId),
-                        clinicId: String(clinicId),
-                        todaysVisitDate: targetDate
-                    });
-                    const arrs: any[] = [];
-                    if (Array.isArray(datesResp?.visits)) arrs.push(datesResp.visits);
-                    if (Array.isArray(datesResp?.resultSet1)) arrs.push(datesResp.resultSet1);
-                    if (Array.isArray(datesResp)) arrs.push(datesResp);
-                    const first = arrs.find(a => Array.isArray(a)) || [];
-                    const match = first.find((v: any) => normalize(v.visitDate || v.visit_date || v.Visit_Date) === targetDate);
-                    visitNo = match?.patientVisitNo || match?.patient_visit_no || match?.visit_number;
-                    // shiftId may be missing; use session fallback
-                    shiftId = match?.shiftId || match?.shift_id || (typeof shiftFromSession === 'number' ? shiftFromSession : parseInt(String(shiftFromSession || 1), 10));
-                }
+                // Fetch the list of past service dates to find the matching visitNo and shiftId
+                const datesResp: any = await patientService.getPreviousServiceVisitDates({
+                    patientId: String(patientId),
+                    doctorId: String(sessionData?.doctorId || ''),
+                    clinicId: String(clinicId),
+                    todaysVisitDate: targetDate
+                });
+
+                const arrs: any[] = [];
+                if (Array.isArray(datesResp?.visits)) arrs.push(datesResp.visits);
+                if (Array.isArray(datesResp?.resultSet1)) arrs.push(datesResp.resultSet1);
+                if (Array.isArray(datesResp)) arrs.push(datesResp);
+                const first = arrs.find(a => Array.isArray(a)) || [];
+                const match = first.find((v: any) => normalize(v.visitDate || v.visit_date || v.Visit_Date) === targetDate);
+
+                visitNo = match?.patientVisitNo || match?.patient_visit_no || match?.visit_number;
+                // shiftId may be missing; use session fallback
+                shiftId = match?.shiftId || match?.shift_id || (typeof shiftFromSession === 'number' ? shiftFromSession : parseInt(String(shiftFromSession || 1), 10));
 
                 if (!shiftId) {
                     shiftId = (typeof shiftFromSession === 'number' ? shiftFromSession : parseInt(String(shiftFromSession || 1), 10));
@@ -582,7 +577,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                                 fontWeight: '500',
                                                 fontSize: '12px'
                                             }}>
-                                                ₹{service.details}
+                                                ₹{service.totalFees}
                                             </td>
                                         </tr>
                                     ))}
