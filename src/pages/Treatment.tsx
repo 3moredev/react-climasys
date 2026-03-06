@@ -5603,7 +5603,12 @@ export default function Treatment() {
                                                     title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
                                                 >
                                                     <span style={{ marginRight: '5px' }}>📄</span>
-                                                    <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    <span style={{
+                                                        maxWidth: '160px',
+                                                        whiteSpace: 'normal',
+                                                        wordBreak: 'break-all',
+                                                        lineHeight: '1.2'
+                                                    }}>
                                                         {(() => {
                                                             const fullPath = doc.documentName;
                                                             // Split by forward or backward slash, filter out empty strings (e.g. trailing slash), and take the last part
