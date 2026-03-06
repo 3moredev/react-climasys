@@ -2861,26 +2861,6 @@ export default function AppointmentTable() {
                         )}
                     </div>
 
-                    {/* Search Button for Doctor Screen */}
-                    <button
-                        className="btn"
-                        onClick={handleSearchButtonClick}
-                        style={{
-                            backgroundColor: "rgb(0, 123, 255)",
-                            color: "white",
-                            borderColor: "#28a745",
-                            height: "38px",
-                            padding: "6px 16px",
-                            fontSize: "0.9rem",
-                            borderRadius: "6px",
-                            fontFamily: "'Roboto', sans-serif",
-                            fontWeight: 500
-                        }}
-                        title="Check if selected patient has appointment today"
-                    >
-                        <i className="fas fa-search me-1"></i>
-                        Search
-                    </button>
 
 
                     {/* Status filter */}
@@ -3035,7 +3015,7 @@ export default function AppointmentTable() {
                                             <th className="age-col text-start">Age</th>
                                             <th className="contact-col text-start">Contact</th>
                                             <th className="time-col text-start">Time</th>
-                                            <th className="refer-col text-start">Referred By</th>
+
                                             <th className="provider-col text-start">Provider</th>
                                             <th className="online-col text-start">Online</th>
                                             <th className="status-col text-start">Status</th>
@@ -3045,6 +3025,7 @@ export default function AppointmentTable() {
                                     </thead>
                                     <tbody>
                                         {currentAppointments.map((a, i) => {
+                                            const originalIndex = startIndex + i;
                                             return (
                                                 <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                     <td className="sr-col">{a.sr}</td>
@@ -3066,20 +3047,92 @@ export default function AppointmentTable() {
                                                     <td className="age-col">{getAgeString(a.dob)}</td>
                                                     <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                     <td className="time-col">{extractTime(a.time)}</td>
-                                                    <td className="refer-col">
-                                                        {a.referBy === 'S' || a.referBy === 'Self' || a.referralName === 'Self' ? 'Self' : (a.referralName || '-')}
+
+                                                    <td className="provider-col">
+                                                        <Select
+                                                            value={getDoctorLabelById(a.doctorId) || getDoctorLabelById(a.provider) || a.provider || getDoctorLabelById(selectedDoctorId) || ''}
+                                                            onChange={(e) => handleProviderChange(originalIndex, e.target.value as string)}
+                                                            displayEmpty
+                                                            disabled={(isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2}
+                                                            renderValue={(selected) => {
+                                                                if (!selected) {
+                                                                    return <em style={{ color: '#999' }}>Select Provider</em>;
+                                                                }
+                                                                return selected;
+                                                            }}
+                                                            variant="outlined"
+                                                            size="small"
+                                                            sx={{
+                                                                height: '30px', // Slightly taller for better alignment
+                                                                width: '100%',  // Fill the cell
+                                                                fontSize: '0.85rem',
+                                                                backgroundColor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? '#f5f5f5' : '#fff',
+                                                                cursor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer',
+                                                                borderRadius: '4px',
+                                                                '&.Mui-disabled': {
+                                                                    pointerEvents: 'auto',
+                                                                    cursor: 'not-allowed',
+                                                                    '& .MuiSelect-select': {
+                                                                        cursor: 'not-allowed !important',
+                                                                        pointerEvents: 'auto !important'
+                                                                    }
+                                                                },
+                                                                '& .MuiSelect-select': {
+                                                                    padding: '4px 24px 4px 8px', // Better vertical centering
+                                                                    display: 'flex',
+                                                                    alignItems: 'center'
+                                                                },
+                                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: '#ced4da'
+                                                                },
+                                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: '#ced4da'
+                                                                },
+                                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: '#86b7fe',
+                                                                    borderWidth: '1px'
+                                                                }
+                                                            }}
+                                                            MenuProps={{
+                                                                PaperProps: {
+                                                                    sx: {
+                                                                        marginTop: '4px',
+                                                                        zIndex: 3000,
+                                                                        '& .MuiMenuItem-root.Mui-selected': {
+                                                                            backgroundColor: '#eeeeee !important',
+                                                                        },
+                                                                        '& .MuiMenuItem-root:hover': {
+                                                                            backgroundColor: '#eeeeee',
+                                                                        },
+                                                                        '& .MuiMenuItem-root.Mui-selected:hover': {
+                                                                            backgroundColor: '#eeeeee',
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }}
+                                                        >
+                                                            {getProviderOptionsWithSelectedFirst().map(opt => (
+                                                                <MenuItem key={opt.id} value={opt.label} sx={{ fontSize: '0.85rem' }}>{opt.label}</MenuItem>
+                                                            ))}
+                                                        </Select>
                                                     </td>
-                                                    <td className="provider-col">{formatProviderLabel(a.provider)}</td>
                                                     <td className="online-cell">
                                                         <input
                                                             type="text"
                                                             className="form-control form-control-sm"
                                                             value={a.online}
-                                                            onChange={(e) => { /* disabled on doctor screen */ }}
+                                                            onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
                                                             placeholder="HH:mm"
-                                                            disabled
-                                                            title="Online time is disabled on this screen"
-                                                            style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px", cursor: 'not-allowed', backgroundColor: '#f5f5f5' }}
+                                                            disabled={normalizeStatusLabel(a.status) !== 'WAITING'}
+                                                            title={normalizeStatusLabel(a.status) !== 'WAITING' ? "Only editable when status is WAITING" : ""}
+                                                            style={{
+                                                                fontFamily: "'Roboto', sans-serif",
+                                                                fontWeight: 500,
+                                                                height: "28px",
+                                                                padding: "2px 6px",
+                                                                backgroundColor: normalizeStatusLabel(a.status) !== 'WAITING' ? '#f5f5f5' : '#ffffff',
+                                                                cursor: normalizeStatusLabel(a.status) !== 'WAITING' ? 'not-allowed' : 'text'
+                                                            }}
                                                         />
                                                     </td>
                                                     <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
@@ -3163,21 +3216,90 @@ export default function AppointmentTable() {
                                                                 <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
                                                             </div>
 
-                                                            {/* Save Button - Disabled for Doctor */}
+                                                            {/* Save Button for Doctor */}
                                                             <div
                                                                 title="Save"
+                                                                onClick={async () => {
+                                                                    setSearchTerm("");
+                                                                    setSearchResults([]);
+                                                                    setShowDropdown(false);
+                                                                    try {
+                                                                        const pid = a.patientId;
+                                                                        const vno = Number(a.visitNumber) || getLatestVisitNumber(a.patientId);
+                                                                        const shift = a.shiftId || 1;
+                                                                        const clinic = a.clinicId || sessionData?.clinicId || '';
+                                                                        const onlineTime = (a.online || '').trim() || undefined;
+                                                                        const updatedProvider = a.provider || getDoctorLabelById(selectedDoctorId) || '';
+                                                                        const doctor = getDoctorIdFromProviderName(updatedProvider) || selectedDoctorId || a.doctorId || '';
+                                                                        const currentStatus = (a as any).statusPending || a.status;
+                                                                        const statusId = mapStatusLabelToId(currentStatus);
+
+                                                                        if (!pid || !clinic || !doctor) {
+                                                                            setSnackbarMessage('Missing identifiers to update appointment');
+                                                                            setShowSnackbar(true);
+                                                                            setTimeout(() => setShowSnackbar(false), 3000);
+                                                                            return;
+                                                                        }
+
+                                                                        const response = await appointmentService.updateTodaysAppointment({
+                                                                            patientId: String(pid),
+                                                                            patientVisitNo: Number(vno),
+                                                                            shiftId: Number(shift),
+                                                                            clinicId: String(clinic),
+                                                                            onlineAppointmentTime: onlineTime,
+                                                                            doctorId: String(doctor),
+                                                                            statusId: Number(statusId),
+                                                                            userId: String(sessionData?.userId || 'system')
+                                                                        });
+
+                                                                        if (response.success) {
+                                                                            setSnackbarMessage('Appointment updated successfully');
+                                                                            setShowSnackbar(true);
+                                                                            setTimeout(() => setShowSnackbar(false), 3000);
+                                                                            // Commit pending status to saved fields
+                                                                            if ((appointments[originalIndex] as any).statusPending) {
+                                                                                const committed = (appointments[originalIndex] as any).statusPending;
+                                                                                updateAppointmentField(originalIndex, 'status', committed);
+                                                                                updateAppointmentField(originalIndex, 'statusColor', getStatusColor(committed));
+                                                                                updateAppointmentField(originalIndex, 'statusPending' as any, undefined);
+                                                                                updateAppointmentField(originalIndex, 'statusColorPending' as any, undefined);
+                                                                            }
+                                                                            // Refresh current provider's appointments to reflect server truth
+                                                                            try {
+                                                                                await refreshAppointmentsForSelectedDoctor();
+                                                                            } catch (e) {
+                                                                                console.warn('Refresh after save failed:', e);
+                                                                            }
+                                                                        } else {
+                                                                            setSnackbarMessage('Update failed: ' + (response.message || 'Unknown error'));
+                                                                            setShowSnackbar(true);
+                                                                            setTimeout(() => setShowSnackbar(false), 4000);
+                                                                        }
+                                                                    } catch (err) {
+                                                                        console.error('Update appointment failed:', err);
+                                                                        setSnackbarMessage('Failed to update appointment: ' + (err as any).message);
+                                                                        setShowSnackbar(true);
+                                                                        setTimeout(() => setShowSnackbar(false), 4000);
+                                                                    }
+                                                                }}
                                                                 style={{
                                                                     display: 'inline-flex',
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
                                                                     width: '28px',
                                                                     height: '28px',
-                                                                    cursor: 'not-allowed',
-                                                                    color: '#9e9e9e',
-                                                                    backgroundColor: '#f5f5f5',
+                                                                    cursor: 'pointer',
+                                                                    color: '#607D8B',
+                                                                    backgroundColor: 'transparent',
                                                                     borderRadius: '4px',
                                                                     border: '1px solid #ddd',
-                                                                    opacity: 0.5
+                                                                    opacity: 1
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.borderColor = 'black';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.borderColor = '#ddd';
                                                                 }}
                                                             >
                                                                 <Save fontSize="small" />
@@ -3501,10 +3623,17 @@ export default function AppointmentTable() {
                                                                 className="form-control form-control-sm"
                                                                 placeholder="HH:mm"
                                                                 value={appointment.online}
-                                                                onChange={(e) => { /* disabled on doctor screen */ }}
-                                                                disabled
-                                                                title="Online time is disabled on this screen"
-                                                                style={{ width: '80px', height: '28px', padding: '2px 6px', display: 'inline-block', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }}
+                                                                onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
+                                                                disabled={normalizeStatusLabel(appointment.status) !== 'WAITING'}
+                                                                title={normalizeStatusLabel(appointment.status) !== 'WAITING' ? "Only editable when status is WAITING" : ""}
+                                                                style={{
+                                                                    width: '80px',
+                                                                    height: '28px',
+                                                                    padding: '2px 6px',
+                                                                    display: 'inline-block',
+                                                                    cursor: normalizeStatusLabel(appointment.status) !== 'WAITING' ? 'not-allowed' : 'text',
+                                                                    backgroundColor: normalizeStatusLabel(appointment.status) !== 'WAITING' ? '#f5f5f5' : '#ffffff'
+                                                                }}
                                                             />
                                                         </span>
                                                     </div>
@@ -4568,7 +4697,7 @@ export default function AppointmentTable() {
                                                         value={getDoctorLabelById(a.doctorId) || getDoctorLabelById(a.provider) || a.provider || getDoctorLabelById(selectedDoctorId) || ''}
                                                         onChange={(e) => handleProviderChange(originalIndex, e.target.value as string)}
                                                         displayEmpty
-                                                        disabled={isReceptionist && mapStatusLabelToId(a.status) >= 2}
+                                                        disabled={(isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2}
                                                         renderValue={(selected) => {
                                                             if (!selected) {
                                                                 return <em style={{ color: '#999' }}>Select Provider</em>;
@@ -4581,8 +4710,8 @@ export default function AppointmentTable() {
                                                             height: '30px', // Slightly taller for better alignment
                                                             width: '100%',  // Fill the cell
                                                             fontSize: '0.85rem',
-                                                            backgroundColor: (isReceptionist && mapStatusLabelToId(a.status) >= 2) ? '#f5f5f5' : '#fff',
-                                                            cursor: (isReceptionist && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer',
+                                                            backgroundColor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? '#f5f5f5' : '#fff',
+                                                            cursor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer',
                                                             borderRadius: '4px',
                                                             '&.Mui-disabled': {
                                                                 pointerEvents: 'auto',
