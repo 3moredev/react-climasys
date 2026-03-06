@@ -67,7 +67,7 @@ const AppTheme = createTheme({
                     position: 'relative',
                     // Disabled look similar to Appointment header select
                     '& .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-input, & .MuiOutlinedInput-root.Mui-disabled .MuiSelect-select': {
-                        backgroundColor: '#ECEFF1',
+                        backgroundColor: '#f5f5f5',
                         WebkitTextFillColor: 'inherit'
                     },
                     // Autocomplete styling to match other inputs and remove inner borders
