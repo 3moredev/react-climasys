@@ -310,7 +310,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 if (patched.rawVisit) {
                     const planValue = patched.rawVisit.Plan || patched.rawVisit.plan || patched.rawVisit.Treatment_Plan;
                     const instructionsValue = patched.rawVisit.Instructions || patched.rawVisit.instructions;
-                    
+
                     if (planValue || instructionsValue) {
                         const planBase = String(planValue || '').trim();
                         const planInstr = String(instructionsValue || '').trim();
@@ -605,6 +605,54 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 if ((!patched.dressing || patched.dressing === '') && patched.rawVisit && patched.rawVisit.Dressing !== undefined && patched.rawVisit.Dressing !== null) {
                     patched.dressing = String(patched.rawVisit.Dressing);
                     console.log('PatientFormTest: Patched dressing from rawVisit.Dressing:', patched.dressing);
+                }
+
+                // Referred By: format using referral code + doctor name from rawVisit
+                if (patched.rawVisit) {
+                    const getRef = (obj: any, ...keys: string[]) => {
+                        for (const k of keys) {
+                            if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') return obj[k];
+                        }
+                        return '';
+                    };
+
+                    // Distinguish between Code (e.g. 'D', '1') and Name (e.g. 'Dr. Smith')
+                    // Some APIs use 'referred_by' for name, others for code. We'll try to prioritize known code fields.
+                    // Added 'referralBy' and 'referredBy' to code lookup as they often carry the ID/Code
+                    const refCodeRaw = getRef(patched.rawVisit, 'referralBy', 'referredBy', 'Refer_By', 'refer_by', 'refer_id', 'referralCode', 'referral_code', 'referral_by', 'ReferBy', 'ReferId', 'referBy');
+                    const refNameRaw = getRef(patched.rawVisit, 'Refer_Doctor_Details', 'refer_doctor_details', 'ReferDoctorDetails', 'referralName', 'referral_name', 'referred_by', 'Referred_By', 'referredBy', 'ReferredBy');
+
+                    const refCode = String(refCodeRaw).trim().toUpperCase();
+                    const refName = String(refNameRaw).trim();
+
+                    // Comprehensive static map including common numeric IDs and labels
+                    const staticMap: Record<string, string> = {
+                        'D': 'Doctor', '1': 'Doctor', 'DOCTOR': 'Doctor',
+                        'S': 'Self', '2': 'Self', 'SELF': 'Self',
+                        'O': 'Other', '3': 'Other', 'OTHER': 'Other',
+                        'F': 'Family-Friend', '4': 'Family-Friend', 'FRIEND': 'Family-Friend', 'FAMILY': 'Family-Friend',
+                        'I': 'Internet', '5': 'Internet', 'INTERNET': 'Internet'
+                    };
+
+                    console.log('PatientFormTest: Referral Mapping Debug:', { refCode, refName, refCodeRaw, refNameRaw });
+
+                    if (refCode && staticMap[refCode]) {
+                        // User requested to show referral code (category) instead of name
+                        patched.referredBy = staticMap[refCode];
+                    } else if (refName) {
+                        // If no code but we have a name, check if the name is actually a category label
+                        const matchedLabel = Object.values(staticMap).find(label => refName.toUpperCase() === label.toUpperCase());
+                        if (matchedLabel) {
+                            patched.referredBy = matchedLabel;
+                        } else {
+                            // User requested to show "referal code" instead of name. 
+                            // In this app, a name-only referral in history is almost always a 'Doctor' referral.
+                            patched.referredBy = 'Doctor';
+                        }
+                    } else {
+                        patched.referredBy = '';
+                    }
+                    console.log('PatientFormTest: Final referredBy:', patched.referredBy);
                 }
 
                 // Receipt fields: Receipt No / Receipt Date / Remark
