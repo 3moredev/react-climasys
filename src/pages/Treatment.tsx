@@ -4373,14 +4373,17 @@ export default function Treatment() {
                 visitDate: `${toYyyyMmDd(new Date())} ${new Date().toTimeString().slice(0, 8)}`,
                 patientVisitNo: String(patientVisitNo || 0), // Convert to string
 
-                // Referral information
-                referBy: (formData.referralBy === 'Self')
-                    ? 'S'
-                    : 'O', // S for Self, O for Other
-                referralName: formData.referralBy === 'Self' ? 'Self' : (formData.referralBy || ''),
-                referralContact: formData.referralBy === 'Self' ? '' : '',
-                referralEmail: formData.referralBy === 'Self' ? '' : '',
-                referralAddress: formData.referralBy === 'Self' ? '' : '',
+                // Referral information — preserve the actual referral code from treatmentData (e.g., 'D' for Doctor)
+                // formData.referralBy holds the display name/category; treatmentData.referralCode holds the actual code.
+                referBy: treatmentData?.referralCode
+                    || (formData.referralBy === 'Self' ? 'S' : formData.referralBy)
+                    || 'S',
+                referralName: treatmentData?.referralName
+                    || (formData.referralBy === 'Self' ? 'Self' : formData.referralBy)
+                    || '',
+                referralContact: '',
+                referralEmail: '',
+                referralAddress: '',
 
                 // Vital signs
                 pulse: parseInt(formData.pulse) || 0,
@@ -5819,8 +5822,15 @@ export default function Treatment() {
                                                         'F': 'Family-Friend',
                                                         'I': 'Internet'
                                                     };
+
+                                                    const formatRef = (base: string, refName?: string) => {
+                                                        if (!refName || refName === base || refName === 'Self' || refName === '') return base;
+                                                        if (Object.values(staticMap).includes(refName)) return base;
+                                                        return `${base} - ${refName}`;
+                                                    };
+
                                                     if (code && staticMap[code]) {
-                                                        return staticMap[code];
+                                                        return formatRef(staticMap[code]);
                                                     }
 
                                                     if (!referByOptions || referByOptions.length === 0) {
@@ -5842,7 +5852,8 @@ export default function Treatment() {
                                                     // 1. Try to find option by ID (exact match)
                                                     const optById = referByOptions.find(o => getOptId(o) === code);
                                                     if (optById) {
-                                                        return optById.name || (optById as any).referByDescription || '';
+                                                        const base = optById.name || (optById as any).referByDescription || '';
+                                                        return formatRef(base, name);
                                                     }
 
                                                     // 2. Try to find option by Name (case-insensitive)
@@ -5851,7 +5862,8 @@ export default function Treatment() {
                                                         o.name.toLowerCase() === String(name).toLowerCase()
                                                     );
                                                     if (optByName) {
-                                                        return optByName.name || (optByName as any).referByDescription || '';
+                                                        const base = optByName.name || (optByName as any).referByDescription || '';
+                                                        return formatRef(base, name);
                                                     }
 
                                                     // 3. Fallback: If code is a descriptive string allow it

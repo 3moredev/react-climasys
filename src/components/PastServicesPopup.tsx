@@ -593,7 +593,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                             gap: '15px'
                         }}>
                             {/* Row 1 */}
-                            <ClearableTextField
+                            {/* <ClearableTextField
                                 label="Billed (Rs)"
                                 fullWidth
                                 variant="outlined"
@@ -619,10 +619,10 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 value={billing.acBalance}
                                 onChange={(val) => setBilling(b => ({ ...b, acBalance: val }))}
                                 disabled
-                            />
+                            /> */}
 
                             {/* Row 2 */}
-                            <ClearableTextField
+                            {/* <ClearableTextField
                                 label="Dues (Rs)"
                                 fullWidth
                                 variant="outlined"
@@ -648,10 +648,10 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 value={billing.reason}
                                 onChange={(val) => setBilling(b => ({ ...b, reason: val }))}
                                 disabled
-                            />
+                            /> */}
 
                             {/* Row 3 */}
-                            <TextField
+                            {/* <TextField
                                 select
                                 label="Payment By"
                                 value={billing.paymentBy}
@@ -686,10 +686,10 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 value={billing.referredBy}
                                 onChange={(val) => setBilling(b => ({ ...b, referredBy: val }))}
                                 disabled
-                            />
+                            /> */}
 
                             {/* Row 4 */}
-                            <ClearableTextField
+                            {/* <ClearableTextField
                                 label="Receipt no"
                                 fullWidth
                                 variant="outlined"
@@ -715,7 +715,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 value={billing.receiptAmount}
                                 onChange={(val) => setBilling(b => ({ ...b, receiptAmount: val }))}
                                 disabled
-                            />
+                            /> */}
                         </div>
                     </div>
                 </div>

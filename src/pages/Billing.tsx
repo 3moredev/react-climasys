@@ -135,6 +135,8 @@ interface TreatmentData {
     age?: number;
     gender?: string;
     contact?: string;
+    referralName?: string;
+    referralCode?: string;
 }
 
 interface PreviousVisit {
@@ -234,7 +236,7 @@ export default function Billing() {
 
     // Form data state
     const [formData, setFormData] = useState({
-        referralBy: 'Self',
+        referralBy: '',
         visitType: {
             inPerson: true, // Will be overwritten by API response
             followUp: false,
@@ -1040,13 +1042,53 @@ export default function Billing() {
                     return await patientService.getMasterLists(params);
                 };
 
-                // 3. Execute Fetches in Parallel
-                const [billingOptions, masterListsResp] = await Promise.all([
+                // 3. Define Fetch for Appointment Details (to get referralBy from PatientVisitDetails)
+                const fetchAppointmentDetails = async () => {
+                    if (!patientId || !visitNumber) return null;
+                    try {
+                        const result = await visitService.getAppointmentDetails({
+                            patientId: String(patientId),
+                            doctorId: String(doctorId),
+                            shiftId: Number(shiftId),
+                            clinicId: String(clinicId),
+                            patientVisitNo: Number(visitNumber),
+                            languageId: 1
+                        });
+                        if (result?.found && result?.mainData?.length > 0) {
+                            return result.mainData[0];
+                        }
+                    } catch (e) {
+                        console.warn('Billing: Could not fetch appointment details for referral:', e);
+                    }
+                    return null;
+                };
+
+                // 4. Execute Fetches in Parallel
+                const [billingOptions, masterListsResp, appointmentData] = await Promise.all([
                     fetchBillingOptions(),
-                    fetchMasterListsData()
+                    fetchMasterListsData(),
+                    fetchAppointmentDetails()
                 ]);
 
                 if (cancelled) return;
+
+                // --- Apply Appointment Details (referral) ---
+                if (appointmentData) {
+                    const refCode = appointmentData.referBy || appointmentData.refer_by || appointmentData.refer_id || appointmentData.Refer_By || '';
+                    const refName = appointmentData.referralName || appointmentData.referral_name || appointmentData.ReferralName ||
+                        appointmentData.Refer_Doctor_Details || appointmentData.refer_doctor_details ||
+                        appointmentData.referredBy || appointmentData.referred_by || '';
+                    if (refCode || refName) {
+                        setTreatmentData(prev => ({
+                            ...prev,
+                            referralCode: refCode || prev?.referralCode,
+                            referralName: refName || prev?.referralName
+                        } as any));
+                        if (refName) {
+                            setFormData(prev => ({ ...prev, referralBy: String(refName) }));
+                        }
+                    }
+                }
 
                 // --- Apply Billing Options ---
                 setBillingDetailsOptions(billingOptions);
@@ -1147,6 +1189,14 @@ export default function Billing() {
                                     planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv,
                                     fud: (vitals.follow_up_type ?? vitals.Follow_Up_Type ?? prev.fud)
                                 }));
+
+                                const referredByVal = uiFields?.referredBy ?? uiFields?.referred_by ?? dataRoot?.referredBy ?? vitals?.referralName ?? vitals?.referral_name ?? vitals?.refer_doctor_details ?? vitals?.referredBy ?? vitals?.referred_by;
+                                if (referredByVal) {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        referralBy: String(referredByVal)
+                                    }));
+                                }
 
                                 // Billing Fields from master list
                                 setBillingData(prev => {
@@ -1347,7 +1397,12 @@ export default function Billing() {
     // Get treatment data from location state
     useEffect(() => {
         if (location.state) {
-            setTreatmentData(location.state as TreatmentData);
+            const state = location.state as TreatmentData;
+            setTreatmentData(state);
+            // Sync referralBy from incoming state so Referred By shows correctly without waiting for API
+            if (state.referralName) {
+                setFormData(prev => ({ ...prev, referralBy: state.referralName! }));
+            }
         }
     }, [location.state]);
 
@@ -3381,7 +3436,24 @@ export default function Billing() {
                                                 fontSize: '13px',
                                                 color: '#333',
                                                 fontWeight: 500
-                                            }}>Self</span>
+                                            }}>
+                                                {(() => {
+                                                    // Use referralCode (e.g. 'D') for lookup; referralName for the actual doctor name
+                                                    const codeRaw = treatmentData?.referralCode || formData?.referralBy || '';
+                                                    const nameRaw = treatmentData?.referralName || formData?.referralBy || '';
+                                                    const code = String(codeRaw).trim().toUpperCase();
+                                                    const staticMap: Record<string, string> = { 'D': 'Doctor', 'S': 'Self', 'O': 'Other', 'F': 'Family-Friend', 'I': 'Internet' };
+                                                    const formatRef = (base: string, refName?: string) => {
+                                                        if (!refName || refName === base || refName === 'Self' || refName === '') return base;
+                                                        if (Object.values(staticMap).includes(refName)) return base;
+                                                        return `${base}`;
+                                                    };
+                                                    if (code && staticMap[code]) return formatRef(staticMap[code], nameRaw);
+                                                    if (nameRaw && nameRaw !== 'Self') return nameRaw;
+                                                    if (codeRaw && String(codeRaw).length > 2) return codeRaw;
+                                                    return '';
+                                                })()}
+                                            </span>
                                         </div>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '13px', whiteSpace: 'nowrap' }}>
                                             <input
