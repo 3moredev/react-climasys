@@ -1476,7 +1476,18 @@ export default function Treatment() {
 
     // Determine In-Person checkbox state based on status
     const inPersonChecked = React.useMemo(() => {
-        // High priority: value from backend
+        const rawStatus = String(treatmentData?.status || '').trim().toUpperCase();
+
+        // Force the checkbox to true for these specific statuses, even if the backend returns false
+        const forceCheckedStatuses = ['SAVE', 'WAITING', 'WITH DOCTOR', 'PRESCRIPTION/COLLECTION', 'COMPLETE', 'COMPLETED', 'SUBMITTED', 'COLLECTION', 'WAITING FOR MEDICINE', 'WAITINGFORMEDICINE'];
+        const isForceChecked = forceCheckedStatuses.includes(rawStatus) ||
+            (rawStatus && forceCheckedStatuses.some(s => rawStatus.startsWith(s)));
+
+        if (isForceChecked) {
+            return true;
+        }
+
+        // High priority: value from backend (if not a force-checked status)
         if (treatmentData?.inPerson !== undefined) {
             return treatmentData.inPerson;
         }
@@ -3601,19 +3612,23 @@ export default function Treatment() {
                         computedInPerson = normalized.inPerson;
                         console.log('No status available; trusting API inPerson value:', computedInPerson);
                     } else {
-                        // Only patch inPerson if status is "SAVE"
-                        const shouldPatchInPerson = finalStatus === 'SAVE';
+                        // For specific statuses, force In-Person to be checked
+                        const forceCheckedStatuses = ['SAVE', 'WAITING', 'WITH DOCTOR', 'PRESCRIPTION/COLLECTION', 'COMPLETE', 'COMPLETED', 'SUBMITTED', 'COLLECTION', 'WAITING FOR MEDICINE', 'WAITINGFORMEDICINE'];
 
-                        if (shouldPatchInPerson && typeof normalized.inPerson === 'boolean') {
+                        const isForceChecked = forceCheckedStatuses.includes(finalStatus) ||
+                            forceCheckedStatuses.some(s => finalStatus.startsWith(s));
+
+                        if (isForceChecked) {
+                            computedInPerson = true;
+                            console.log('Forcing inPerson=true based on requested status:', finalStatus);
+                        } else if (finalStatus === 'CONSULT ON CALL') {
+                            computedInPerson = false;
+                            console.log('Forcing inPerson=false based on Teleconsult status:', finalStatus);
+                        } else if (typeof normalized.inPerson === 'boolean') {
                             computedInPerson = normalized.inPerson;
-                            console.log('Patching inPerson from API for status', finalStatus, ':', computedInPerson);
-                        } else if (!shouldPatchInPerson) {
-                            // Compute from status
-                            if (finalStatus === 'CONSULT ON CALL' || (finalStatus !== 'WAITING' && finalStatus !== 'WITH DOCTOR')) {
-                                computedInPerson = false;
-                            } else if (finalStatus === 'WAITING' || finalStatus === 'WITH DOCTOR') {
-                                computedInPerson = true;
-                            }
+                            console.log('Using API inPerson value for status', finalStatus, ':', computedInPerson);
+                        } else {
+                            computedInPerson = true; // Default
                         }
                     }
 
