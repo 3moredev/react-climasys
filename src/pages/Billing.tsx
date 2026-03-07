@@ -548,7 +548,7 @@ export default function Billing() {
         const gender = escapeHtml(treatmentData?.gender || '');
         const age = treatmentData?.age ? `${treatmentData.age}` : '';
         const patientId = escapeHtml(treatmentData?.patientId || '');
-        const contact = escapeHtml(treatmentData?.contact || '-');
+        const contact = escapeHtml(treatmentData?.contact || 'NA');
         const weight = escapeHtml(formData.weight || '-');
         const height = escapeHtml(formData.height || '-');
         const bmi = escapeHtml(formData.bmi || '-');
@@ -829,7 +829,7 @@ export default function Billing() {
         const gender = escapeHtml(treatmentData?.gender || '');
         const age = treatmentData?.age ? `${treatmentData.age}` : '';
         const patientId = escapeHtml(treatmentData?.patientId || '');
-        const contact = escapeHtml(treatmentData?.contact || '-');
+        const contact = escapeHtml(treatmentData?.contact || 'NA');
         const weight = escapeHtml(formData.weight || '-');
         const height = escapeHtml(formData.height || '-');
         const bmi = escapeHtml(formData.bmi || '-');
@@ -3873,7 +3873,11 @@ export default function Billing() {
 
                             {/* Instructions Section */}
                             {mlInstructionsTable.length > 0 && (
-                                <div style={{ marginBottom: 12 }}>
+                                <div style={{
+                                    marginBottom: 12,
+                                    opacity: (isFormDisabled || isSubmitting) ? 0.5 : 1,
+                                    pointerEvents: (isFormDisabled || isSubmitting) ? 'none' : 'auto',
+                                }}>
                                     {/* <div style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
@@ -3949,12 +3953,12 @@ export default function Billing() {
                                         borderTop: 'none',
                                         borderRadius: '0 0 4px 4px',
                                         overflow: 'hidden',
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976d2',
                                         color: 'white'
                                     }}>
                                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                             <thead>
-                                                <tr style={{ backgroundColor: '#1976d2' }}>
+                                                <tr style={{ backgroundColor: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976d2' }}>
                                                     <th style={{
                                                         padding: '6px',
                                                         textAlign: 'left',
