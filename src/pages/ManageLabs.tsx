@@ -182,6 +182,7 @@ export default function ManageLabs() {
           doctorId: doctorIdToUse,
           clinicId: clinicId,
           labTestName: newLabTestName,
+          labTestDescription: newLabTestName,
           Lab_Test_Description: newLabTestName,
           priority: data.priority ? parseInt(data.priority, 10) : 0,
           priorityValue: data.priority ? parseInt(data.priority, 10) : 0

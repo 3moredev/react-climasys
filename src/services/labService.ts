@@ -77,7 +77,7 @@ export interface UpdateLabTestRequest extends CreateLabTestRequest {
 }
 
 // Update lab test response interface (same as create)
-export interface UpdateLabTestResponse extends CreateLabTestResponse {}
+export interface UpdateLabTestResponse extends CreateLabTestResponse { }
 
 // Lab Test Parameter interfaces
 export interface LabTestParameter {
@@ -144,17 +144,17 @@ export const labService = {
       const resp = await api.get<any>(`/lab/master/tests/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}`);
       console.log('Get all lab tests for doctor raw response:', resp.data);
       console.log('Response type:', typeof resp.data, 'Is array:', Array.isArray(resp.data));
-      
+
       const data: any = resp.data;
-      
+
       // Handle different response structures
       // 1. Direct array response
       // 2. Wrapped in { labTests: [...] }
       // 3. Wrapped in { data: [...] }
       // 4. Wrapped in { success: true, data: [...] }
-      
+
       let items: any[] = [];
-      
+
       if (Array.isArray(data)) {
         // Direct array response
         items = data;
@@ -175,12 +175,12 @@ export const labService = {
         console.warn('Unexpected response structure:', data);
         items = [];
       }
-      
+
       // Check if success flag is present and false
       if (typeof data?.success === 'boolean' && !data.success) {
         throw new Error(data?.error || data?.message || 'Failed to fetch lab tests');
       }
-      
+
       // Map the items to LabTestApiResponse format
       const mappedItems: LabTestApiResponse[] = items.map((item: any) => {
         // Handle different field name variations
@@ -188,7 +188,7 @@ export const labService = {
         const priorityValue = item.priorityValue || item.Priority_Value || item.priority_value || item.priority || 0;
         const doctorIdValue = item.doctorId || item.doctor_id || item.Doctor_ID || doctorId;
         const clinicIdValue = item.clinicId || item.clinic_id || item.Clinic_ID || clinicId;
-        
+
         return {
           labTestName: labTestName,
           Lab_Test_Description: labTestName,
@@ -202,7 +202,7 @@ export const labService = {
           modified_on: item.modified_on || item.Modified_On || item.modifiedOn || null
         };
       });
-      
+
       console.log('Mapped lab tests:', mappedItems);
       return mappedItems;
     } catch (error: any) {
@@ -212,11 +212,11 @@ export const labService = {
         response: error.response?.data,
         status: error.response?.status
       });
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -225,11 +225,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching lab tests.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || error.message || 'Failed to get lab tests');
     }
   },
@@ -245,7 +245,7 @@ export const labService = {
   async deleteLabTest(doctorId: string, id: number | string, clinicId: string): Promise<DeleteLabTestResponse> {
     try {
       console.log(`Deleting lab test ID: ${id} for doctor: ${doctorId} and clinic: ${clinicId}`);
-      
+
       const resp = await api.delete<DeleteLabTestResponse>(
         `/lab/master/tests/doctor/${encodeURIComponent(doctorId)}/id/${id}/clinic/${encodeURIComponent(clinicId)}`
       );
@@ -253,11 +253,11 @@ export const labService = {
       return resp.data;
     } catch (error: any) {
       console.error('Delete lab test API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -267,11 +267,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting lab test.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete lab test');
     }
   },
@@ -286,10 +286,10 @@ export const labService = {
   async deleteLabTestByName(doctorId: string, clinicId: string, labTestName: string): Promise<DeleteLabTestResponse> {
     try {
       console.log(`Deleting lab test: ${labTestName} for doctor: ${doctorId} and clinic: ${clinicId}`);
-      
+
       // Encode the labTestName to handle special characters
       const encodedLabTestName = encodeURIComponent(labTestName);
-      
+
       // Try common mount points
       try {
         const resp = await api.delete<DeleteLabTestResponse>(
@@ -318,11 +318,11 @@ export const labService = {
       }
     } catch (error: any) {
       console.error('Delete lab test by name API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -332,11 +332,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting lab test.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete lab test');
     }
   },
@@ -350,17 +350,17 @@ export const labService = {
   async createLabTest(labTest: CreateLabTestRequest): Promise<CreateLabTestResponse> {
     try {
       console.log('Creating new lab test:', labTest);
-      
+
       const resp = await api.post<CreateLabTestResponse>(`/lab/master/tests`, labTest);
       console.log('Create lab test response:', resp.data);
       return resp.data;
     } catch (error: any) {
       console.error('Create lab test API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters or lab test already exists.';
         throw new Error(msg);
@@ -386,11 +386,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while creating lab test.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to create lab test');
     }
   },
@@ -406,17 +406,23 @@ export const labService = {
   async updateLabTest(labTest: UpdateLabTestRequest): Promise<UpdateLabTestResponse> {
     try {
       console.log('Updating lab test:', labTest);
-      
-      const resp = await api.put<UpdateLabTestResponse>(`/lab/master/tests`, labTest);
+
+      const payload = {
+        ...labTest,
+        labTestDescription: labTest.labTestDescription || labTest.labTestName || labTest.Lab_Test_Description,
+        priorityValue: labTest.priorityValue !== undefined ? labTest.priorityValue : labTest.priority || 0
+      };
+
+      const resp = await api.put<UpdateLabTestResponse>(`/lab/master/tests`, payload);
       console.log('Update lab test response:', resp.data);
       return resp.data;
     } catch (error: any) {
       console.error('Update lab test API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -425,11 +431,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while updating lab test.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to update lab test');
     }
   },
@@ -448,10 +454,10 @@ export const labService = {
   async updateLabTestByPath(doctorId: string, clinicId: string, labTestName: string, labTest: UpdateLabTestRequest): Promise<UpdateLabTestResponse> {
     try {
       console.log('Updating lab test:', labTestName, 'for doctor:', doctorId, 'and clinic:', clinicId);
-      
+
       // Encode the labTestName to handle special characters
       const encodedLabTestName = encodeURIComponent(labTestName);
-      
+
       // Primary endpoint: PUT /api/lab-master/doctor/{doctorId}/clinic/{clinicId}/lab-test/{labTestName}
       try {
         const resp = await api.put<UpdateLabTestResponse>(
@@ -483,11 +489,11 @@ export const labService = {
       }
     } catch (error: any) {
       console.error('Update lab test API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -496,11 +502,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while updating lab test.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to update lab test');
     }
   },
@@ -521,7 +527,7 @@ export const labService = {
   ): Promise<LabTestParameterResponse> {
     try {
       console.log(`Getting lab test parameters for doctor: ${doctorId}, clinic: ${clinicId}, test: ${labTestDescription}`);
-      
+
       const encodedDescription = encodeURIComponent(labTestDescription);
       const resp = await api.get<LabTestParameterResponse>(
         `/lab/master/parameters/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/test/${encodedDescription}`
@@ -530,11 +536,11 @@ export const labService = {
       return resp.data;
     } catch (error: any) {
       console.error('Get lab test parameters API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -543,11 +549,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching lab test parameters.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to get lab test parameters');
     }
   },
@@ -567,7 +573,7 @@ export const labService = {
   ): Promise<LabTestParameterResponse> {
     try {
       console.log(`Getting lab test parameters for doctor: ${doctorId}, clinic: ${clinicId}, test ID: ${labTestId}`);
-      
+
       const resp = await api.get<LabTestParameterResponse>(
         `/lab/master/parameters/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/test-id/${labTestId}`
       );
@@ -575,11 +581,11 @@ export const labService = {
       return resp.data;
     } catch (error: any) {
       console.error('Get lab test parameters by test ID API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -588,11 +594,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching lab test parameters.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to get lab test parameters');
     }
   },
@@ -610,7 +616,7 @@ export const labService = {
   ): Promise<LabTestParameterResponse> {
     try {
       console.log(`Getting all lab test parameters for doctor: ${doctorId}, clinic: ${clinicId}`);
-      
+
       const resp = await api.get<LabTestParameterResponse>(
         `/lab/master/parameters/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}`
       );
@@ -618,11 +624,11 @@ export const labService = {
       return resp.data;
     } catch (error: any) {
       console.error('Get all lab test parameters API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -631,11 +637,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching lab test parameters.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to get lab test parameters');
     }
   },
@@ -655,7 +661,7 @@ export const labService = {
   ): Promise<ParameterExistsResponse> {
     try {
       console.log(`Checking if parameter exists: doctorId=${doctorId}, labTestId=${labTestId}, parameterName=${parameterName}`);
-      
+
       const resp = await api.get<ParameterExistsResponse>(
         `/lab/master/parameters/exists`,
         {
@@ -670,11 +676,11 @@ export const labService = {
       return resp.data;
     } catch (error: any) {
       console.error('Check parameter exists API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -683,11 +689,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while checking parameter existence.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to check parameter existence');
     }
   },
@@ -705,7 +711,7 @@ export const labService = {
   ): Promise<ParameterCountResponse> {
     try {
       console.log(`Getting parameter count for doctor: ${doctorId}, labTestId: ${labTestId}`);
-      
+
       const resp = await api.get<ParameterCountResponse>(
         `/lab/master/parameters/count`,
         {
@@ -719,11 +725,11 @@ export const labService = {
       return resp.data;
     } catch (error: any) {
       console.error('Get parameter count API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -732,11 +738,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while getting parameter count.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to get parameter count');
     }
   },
@@ -754,7 +760,7 @@ export const labService = {
   ): Promise<AllLabTestsWithParametersResponse> {
     try {
       console.log(`Getting all lab tests with parameters for doctor: ${doctorId}, clinic: ${clinicId}`);
-      
+
       const resp = await api.get<AllLabTestsWithParametersResponse>(
         `/lab/master/parameters/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/all-with-parameters`
       );
@@ -762,11 +768,11 @@ export const labService = {
       return resp.data;
     } catch (error: any) {
       console.error('Get all lab tests with parameters API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -775,11 +781,11 @@ export const labService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching lab tests with parameters.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to get lab tests with parameters');
     }
   }
