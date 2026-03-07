@@ -837,7 +837,7 @@ export default function Treatment() {
         }
 
         const patientId = escapeHtml(treatmentData?.patientId || '');
-        const contact = escapeHtml(treatmentData?.contact || '-');
+        const contact = escapeHtml(treatmentData?.contact || 'NA');
         const weight = escapeHtml(formData.weight || '-');
         const height = escapeHtml(formData.height || '-');
         const bmi = escapeHtml(formData.bmi || '-');
