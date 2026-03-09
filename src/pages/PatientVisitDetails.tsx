@@ -47,7 +47,7 @@ interface PatientVisitDetailsProps {
     open: boolean;
     onClose: () => void;
     patientData: AppointmentRow | null;
-    onVisitDetailsSubmitted?: (isSubmitFlag: boolean) => void;
+    onVisitDetailsSubmitted?: (isSubmitFlag: boolean, referralData?: { referBy: string, referralName: string }) => void;
     readOnly?: boolean;
 }
 
@@ -1603,7 +1603,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
                 // Notify parent component that visit details were submitted
                 if (onVisitDetailsSubmitted) {
-                    onVisitDetailsSubmitted(true);
+                    onVisitDetailsSubmitted(true, {
+                        referBy: visitData.referBy || '',
+                        referralName: visitData.referralName || ''
+                    });
                 }
 
                 // Persist submission state to localStorage for persistence across refreshes

@@ -1246,7 +1246,27 @@ export default function AppointmentTable() {
             sugar: toStr(get(visit, 'sugar', 'Sugar', 'blood_sugar', 'glucose')),
             tft: toStr(get(visit, 'tft', 'TFT', 'thyroid_function_test')),
             pallorHb: toStr(get(visit, 'Pallor', 'pallorHb', 'pallor_hb', 'Pallor_HB', 'hemoglobin', 'hb')),
-            referredBy: toStr(get(visit, 'Refer_Doctor_Details', 'referredBy', 'referred_by', 'Referred_By', 'referred_to')),
+            referredBy: (() => {
+                const staticMap: Record<string, string> = {
+                    'D': 'Doctor', '1': 'Doctor', 'DOCTOR': 'Doctor',
+                    'S': 'Self', '2': 'Self', 'SELF': 'Self',
+                    'O': 'Other', '3': 'Other', 'OTHER': 'Other',
+                    'F': 'Family-Friend', '4': 'Family-Friend', 'FRIEND': 'Family-Friend', 'FAMILY': 'Family-Friend',
+                    'I': 'Internet', '5': 'Internet', 'INTERNET': 'Internet'
+                };
+
+                const rowReferBy = appointmentRow?.referBy;
+                const rowReferralName = appointmentRow?.referralName;
+
+                // If we have referral name from current appointment, use it (possibly with category)
+                if (rowReferralName && rowReferralName.trim()) {
+                    const category = (rowReferBy && staticMap[rowReferBy.toUpperCase()]) ? staticMap[rowReferBy.toUpperCase()] : rowReferBy;
+                    return category || rowReferralName;
+                }
+
+                // Fallback to historical visit data
+                return toStr(get(visit, 'Refer_Doctor_Details', 'referredBy', 'referred_by', 'Referred_By', 'referred_to'));
+            })(),
 
             // Flags
             inPerson: bool(get(visit, 'in_person', 'inPerson')),
@@ -1405,7 +1425,24 @@ export default function AppointmentTable() {
                     followUp: '',
                     followUpDate: '',
                     remark: '',
-                    status: appointmentRow.status || ''
+                    status: appointmentRow.status || '',
+                    referredBy: (() => {
+                        const staticMap: Record<string, string> = {
+                            'D': 'Doctor', '1': 'Doctor', 'DOCTOR': 'Doctor',
+                            'S': 'Self', '2': 'Self', 'SELF': 'Self',
+                            'O': 'Other', '3': 'Other', 'OTHER': 'Other',
+                            'F': 'Family-Friend', '4': 'Family-Friend', 'FRIEND': 'Family-Friend', 'FAMILY': 'Family-Friend',
+                            'I': 'Internet', '5': 'Internet', 'INTERNET': 'Internet'
+                        };
+
+                        const rowReferBy = appointmentRow.referBy;
+                        const rowReferralName = appointmentRow.referralName;
+                        if (rowReferralName && rowReferralName.trim()) {
+                            const category = (rowReferBy && staticMap[rowReferBy.toUpperCase()]) ? staticMap[rowReferBy.toUpperCase()] : rowReferBy;
+                            return category || rowReferralName;
+                        }
+                        return '';
+                    })()
                 } : null;
                 console.log('Basic form data (no previous visit):', basicData);
                 console.log('Provider in basic data:', basicData?.provider);
@@ -2235,8 +2272,8 @@ export default function AppointmentTable() {
     };
 
     // Handle visit details submission flag
-    const handleVisitDetailsSubmitted = (isSubmitFlag: boolean) => {
-        console.log('Visit details submitted with flag:', isSubmitFlag);
+    const handleVisitDetailsSubmitted = (isSubmitFlag: boolean, referralData?: { referBy: string, referralName: string }) => {
+        console.log('Visit details submitted with flag:', isSubmitFlag, 'Referral data:', referralData);
         if (isSubmitFlag && selectedPatientForVisit?.patientId) {
             // Add the patient ID to the submitted set to change icon color
             setSubmittedVisitDetails(prev => new Set([...prev, selectedPatientForVisit.patientId.toString()]));
@@ -2245,7 +2282,12 @@ export default function AppointmentTable() {
             // Update the appointment in the local state to reflect the change immediately
             setAppointments(prev => prev.map(appointment =>
                 appointment.patientId === selectedPatientForVisit.patientId
-                    ? { ...appointment, visitDetailsSubmitted: true }
+                    ? {
+                        ...appointment,
+                        visitDetailsSubmitted: true,
+                        referBy: referralData?.referBy || appointment.referBy,
+                        referralName: referralData?.referralName || appointment.referralName
+                    }
                     : appointment
             ));
         }
