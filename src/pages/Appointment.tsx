@@ -3098,6 +3098,7 @@ export default function AppointmentTable() {
                                                             onChange={(e) => handleProviderChange(originalIndex, e.target.value as string)}
                                                             displayEmpty
                                                             disabled={(isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2}
+                                                            readOnly={isDoctor && mapStatusLabelToId(a.status) < 2}
                                                             renderValue={(selected) => {
                                                                 if (!selected) {
                                                                     return <em style={{ color: '#999' }}>Select Provider</em>;
@@ -3111,7 +3112,7 @@ export default function AppointmentTable() {
                                                                 width: '100%',  // Fill the cell
                                                                 fontSize: '0.85rem',
                                                                 backgroundColor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? '#f5f5f5' : '#fff',
-                                                                cursor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer',
+                                                                cursor: isDoctor ? 'not-allowed' : (((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer'),
                                                                 borderRadius: '4px',
                                                                 '&.Mui-disabled': {
                                                                     pointerEvents: 'auto',
@@ -3124,7 +3125,11 @@ export default function AppointmentTable() {
                                                                 '& .MuiSelect-select': {
                                                                     padding: '4px 24px 4px 8px', // Better vertical centering
                                                                     display: 'flex',
-                                                                    alignItems: 'center'
+                                                                    alignItems: 'center',
+                                                                    cursor: isDoctor ? 'not-allowed' : 'inherit'
+                                                                },
+                                                                '& .MuiSvgIcon-root': {
+                                                                    cursor: isDoctor ? 'not-allowed' : 'inherit'
                                                                 },
                                                                 '& .MuiOutlinedInput-notchedOutline': {
                                                                     borderColor: '#ced4da'
@@ -3264,6 +3269,7 @@ export default function AppointmentTable() {
                                                             <div
                                                                 title="Save"
                                                                 onClick={async () => {
+                                                                    if (isDoctor) return;
                                                                     setSearchTerm("");
                                                                     setSearchResults([]);
                                                                     setShowDropdown(false);
@@ -3332,18 +3338,18 @@ export default function AppointmentTable() {
                                                                     justifyContent: 'center',
                                                                     width: '28px',
                                                                     height: '28px',
-                                                                    cursor: 'pointer',
-                                                                    color: '#607D8B',
-                                                                    backgroundColor: 'transparent',
+                                                                    cursor: isDoctor ? 'not-allowed' : 'pointer',
+                                                                    color: isDoctor ? '#9e9e9e' : '#607D8B',
+                                                                    backgroundColor: isDoctor ? '#f5f5f5' : 'transparent',
                                                                     borderRadius: '4px',
                                                                     border: '1px solid #ddd',
-                                                                    opacity: 1
+                                                                    opacity: isDoctor ? 0.5 : 1
                                                                 }}
                                                                 onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.borderColor = 'black';
+                                                                    if (!isDoctor) e.currentTarget.style.borderColor = 'black';
                                                                 }}
                                                                 onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.borderColor = '#ddd';
+                                                                    if (!isDoctor) e.currentTarget.style.borderColor = '#ddd';
                                                                 }}
                                                             >
                                                                 <Save fontSize="small" />
@@ -4742,6 +4748,7 @@ export default function AppointmentTable() {
                                                         onChange={(e) => handleProviderChange(originalIndex, e.target.value as string)}
                                                         displayEmpty
                                                         disabled={(isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2}
+                                                        readOnly={isDoctor && mapStatusLabelToId(a.status) < 2}
                                                         renderValue={(selected) => {
                                                             if (!selected) {
                                                                 return <em style={{ color: '#999' }}>Select Provider</em>;
@@ -4755,7 +4762,7 @@ export default function AppointmentTable() {
                                                             width: '100%',  // Fill the cell
                                                             fontSize: '0.85rem',
                                                             backgroundColor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? '#f5f5f5' : '#fff',
-                                                            cursor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer',
+                                                            cursor: isDoctor ? 'not-allowed' : (((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer'),
                                                             borderRadius: '4px',
                                                             '&.Mui-disabled': {
                                                                 pointerEvents: 'auto',
@@ -4768,7 +4775,11 @@ export default function AppointmentTable() {
                                                             '& .MuiSelect-select': {
                                                                 padding: '4px 24px 4px 8px', // Better vertical centering
                                                                 display: 'flex',
-                                                                alignItems: 'center'
+                                                                alignItems: 'center',
+                                                                cursor: isDoctor ? 'not-allowed' : 'inherit'
+                                                            },
+                                                            '& .MuiSvgIcon-root': {
+                                                                cursor: isDoctor ? 'not-allowed' : 'inherit'
                                                             },
                                                             '& .MuiOutlinedInput-notchedOutline': {
                                                                 borderColor: '#ced4da'
