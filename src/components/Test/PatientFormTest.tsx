@@ -94,6 +94,7 @@ type PatientFormData = {
 
     // Raw visit data
     rawVisit?: any;
+    status?: string;
 };
 
 const defaultFormData: PatientFormData = {
@@ -318,6 +319,27 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         console.log("PatientFormTest: Patched plan from rawVisit:", patched.plan);
                     }
                 }
+
+                // ✅ Patch inPerson dynamically
+                const getStatus = (v: any) => {
+                    if (!v) return '';
+                    return String(v.Status || v.status || v.status_description || v.appointmentStatus || v.appointment_status || '').trim().toUpperCase();
+                };
+
+                const statusVal = patched.status || getStatus(patched.rawVisit);
+                const isConsultOnCall = statusVal === 'CONSULT ON CALL' || statusVal === 'ON CALL';
+
+                if (isConsultOnCall) {
+                    patched.inPerson = false;
+                } else if ('inPerson' in initialData) {
+                    // Respect initialData if it's not a consult on call
+                    patched.inPerson = Boolean(initialData.inPerson);
+                } else {
+                    patched.inPerson = true;
+                }
+                console.log("PatientFormTest: Patched inPerson from status:", patched.inPerson, "for status:", statusVal);
+
+
                 // Map prescriptions from API format to component format
                 // Handle prescriptions from initialData or rawVisit.Prescriptions
                 // Priority: Use visit_prescription_overwrite table fields (brand_name, morning-afternoon-night, no_of_days, instruction)
@@ -1083,7 +1105,20 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             fontFamily: "'Roboto', sans-serif",
                             whiteSpace: 'nowrap'
                         }}>
-                            {formData.provider || 'Dr. Tongaonkar'}
+                            {(() => {
+                                const provider = (formData.provider || '').toUpperCase();
+                                // Also check rawVisit status for consistency in header
+                                const getRawStatus = (v: any) => v ? String(v.Status || v.status || v.status_description || v.appointmentStatus || v.appointment_status || '').trim().toUpperCase() : '';
+                                const rawStatus = getRawStatus(formData.rawVisit);
+
+                                const isConsult = provider === 'CONSULT ON CALL' || provider === 'ON CALL' ||
+                                    rawStatus === 'CONSULT ON CALL' || rawStatus === 'ON CALL';
+
+                                if (formData.inPerson && isConsult) {
+                                    return 'Dr. Tongaonkar';
+                                }
+                                return formData.provider || 'Dr. Tongaonkar';
+                            })()}
                         </div>
                     </div>
 
