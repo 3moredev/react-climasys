@@ -105,21 +105,16 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                 const shiftFromSession = (sessionData as any)?.shiftId;
                 if (!patientId || !clinicId) return;
 
-                // First, find the visitNo and shiftId for the given date
-                // Primary: fetch detailed visits
-                let visitNo: number | undefined;
-                let shiftId: number | undefined;
-
+                // First, find all visit dates/numbers for this date.
+                // We collect ALL matching visits for the date to handle multiple visits per day.
                 const normalize = (d: any): string => {
                     if (!d) return '';
                     const s = String(d);
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // YYYY-MM-DD
-                    const parts = s.split(' ');
-                    return parts[0]; // take date portion
+                    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.split(/[ T]/)[0];
+                    return s.split(/[ T]/)[0];
                 };
                 const targetDate = normalize(date);
 
-                // Fetch the list of past service dates to find the matching visitNo and shiftId
                 const datesResp: any = await patientService.getPreviousServiceVisitDates({
                     patientId: String(patientId),
                     doctorId: String(sessionData?.doctorId || ''),
@@ -127,45 +122,52 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                     todaysVisitDate: targetDate
                 });
 
-                const arrs: any[] = [];
-                if (Array.isArray(datesResp?.visits)) arrs.push(datesResp.visits);
-                if (Array.isArray(datesResp?.resultSet1)) arrs.push(datesResp.resultSet1);
-                if (Array.isArray(datesResp)) arrs.push(datesResp);
-                const first = arrs.find(a => Array.isArray(a)) || [];
-                const match = first.find((v: any) => normalize(v.visitDate || v.visit_date || v.Visit_Date) === targetDate);
+                const allVisitsArr: any[] = [];
+                if (Array.isArray(datesResp?.visits)) allVisitsArr.push(...datesResp.visits);
+                if (Array.isArray(datesResp?.resultSet1)) allVisitsArr.push(...datesResp.resultSet1);
+                if (Array.isArray(datesResp)) allVisitsArr.push(...datesResp);
 
-                visitNo = match?.patientVisitNo || match?.patient_visit_no || match?.visit_number;
-                // shiftId may be missing; use session fallback
-                shiftId = match?.shiftId || match?.shift_id || (typeof shiftFromSession === 'number' ? shiftFromSession : parseInt(String(shiftFromSession || 1), 10));
+                // Find all visits that match this date
+                const matchedVisits = allVisitsArr.filter((v: any) => normalize(v.visitDate || v.visit_date || v.Visit_Date) === targetDate);
 
-                if (!shiftId) {
-                    shiftId = (typeof shiftFromSession === 'number' ? shiftFromSession : parseInt(String(shiftFromSession || 1), 10));
-                }
-                if (!visitNo) {
-                    setError('No matching visit found for selected date.');
+                if (matchedVisits.length === 0) {
+                    setServices([]);
+                    setLoading(false);
                     return;
                 }
 
-                // Call items API
-                const itemsResp: any = await patientService.getPreviousServiceVisitItems({
-                    patientId: String(patientId),
-                    doctorId: 'DR-00C10',
-                    clinicId: String(clinicId),
-                    shiftId: Number(shiftId),
-                    visitNo: Number(visitNo),
-                    visitDate: targetDate
-                });
+                // Fetch items for ALL matching visits in parallel
+                const allItemsResults = await Promise.all(matchedVisits.map(async (v: any) => {
+                    try {
+                        const vNo = v.patientVisitNo || v.patient_visit_no || v.visit_number || v.visitNo || v.visit_no;
+                        const sId = v.shiftId || v.shift_id || (sessionData as any)?.shiftId || 1;
 
-                const items: any[] = Array.isArray(itemsResp?.items) ? itemsResp.items : (Array.isArray(itemsResp) ? itemsResp : []);
-
-                const mapped: PastServiceItem[] = items.map((it, idx) => ({
-                    sr: idx + 1,
-                    group: String(it.group || it.group_description || it.category || it.Group || '—'),
-                    subGroup: String(it.subGroup || it.sub_group || it.sub_category || it.SubGroup || '—'),
-                    details: String(it.details || it.description || it.service_description || it.item || '—'),
-                    selected: true, // Check all checkboxes by default
-                    totalFees: Number(it.totalFees ?? it.total_fee ?? it.fees ?? it.amount ?? it.rate ?? 0)
+                        const itemsResp: any = await patientService.getPreviousServiceVisitItems({
+                            patientId: String(patientId),
+                            doctorId: String(sessionData?.doctorId || ''),
+                            clinicId: String(clinicId),
+                            shiftId: Number(sId),
+                            visitNo: Number(vNo),
+                            visitDate: targetDate
+                        });
+                        return Array.isArray(itemsResp?.items) ? itemsResp.items : (Array.isArray(itemsResp) ? itemsResp : []);
+                    } catch (err) {
+                        return [];
+                    }
                 }));
+
+                const combinedItems = allItemsResults.flat();
+
+                const mapped: PastServiceItem[] = combinedItems
+                    .filter(it => String(it.details || it.description || it.service_description || it.item || '').trim().toLowerCase() === "services")
+                    .map((it, idx) => ({
+                        sr: idx + 1,
+                        group: String(it.group || it.group_description || it.category || it.Group || '—'),
+                        subGroup: String(it.subGroup || it.sub_group || it.sub_category || it.SubGroup || '—'),
+                        details: String(it.details || it.description || it.service_description || it.item || '—'),
+                        selected: true,
+                        totalFees: Number(it.totalFees ?? it.total_fee ?? it.fees ?? it.amount ?? it.rate ?? 0)
+                    }));
 
                 setServices(mapped);
 
