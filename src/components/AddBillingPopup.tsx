@@ -10,6 +10,7 @@ export interface BillingDetailOption {
     billing_subgroup_name?: string;
     billing_details?: string;
     default_fees?: number | string;
+    is_default?: boolean;
 }
 
 interface AddBillingPopupProps {
@@ -80,6 +81,8 @@ export default function AddBillingPopup({
     const uncheckedProfessionalFeesRef = React.useRef<Set<string>>(new Set());
     // Track if we should skip auto-selection (when master-lists data is expected)
     const shouldSkipAutoSelectionRef = React.useRef<boolean>(false);
+    // Track if we have already auto-selected default items to not override subsequent unchecks
+    const hasAutoSelectedDefaultsRef = React.useRef<boolean>(false);
     // Track previous totalSelectedFees to prevent unnecessary callbacks
     const prevTotalSelectedFeesRef = React.useRef<number>(0);
 
@@ -128,7 +131,8 @@ export default function AddBillingPopup({
                     billing_group_name: item.billing_group_name ?? item.group_name ?? item.group,
                     billing_subgroup_name: item.billing_subgroup_name ?? item.sub_group_name ?? item.subgroup,
                     billing_details: item.billing_details ?? item.details ?? item.name,
-                    default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? item.fee ?? 0)
+                    default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? item.fee ?? 0),
+                    is_default: Boolean(item.isDefault || item.Is_Default || item.is_default || false)
                 }));
                 if (!cancelled) setOptions(mapped);
 
@@ -459,7 +463,31 @@ export default function AddBillingPopup({
             return prev;
         });
 
-    }, [followUp, effectiveOptions]); // Removed effectiveSelectedIds from dependency to avoid loops, used functional update
+    }, [followUp, effectiveOptions, disableAutoSelect]); // Removed effectiveSelectedIds from dependency to avoid loops, used functional update
+
+    // Auto-select Default Items 
+    React.useEffect(() => {
+        if (disableAutoSelect || shouldSkipAutoSelectionRef.current || hasAutoSelectedDefaultsRef.current) return;
+        if (effectiveOptions.length === 0) return;
+
+        const defaultItems = effectiveOptions.filter(opt => opt.is_default);
+        if (defaultItems.length === 0) return;
+
+        setEffectiveSelectedIds(prev => {
+            // Check if we already have these default items selected
+            const hasAllDefaults = defaultItems.every(item => prev.includes(item.id));
+            if (hasAllDefaults) {
+                hasAutoSelectedDefaultsRef.current = true;
+                return prev;
+            }
+
+            // Only auto-select if we haven't matched billing yet and don't already have extensive selections
+            // If the user hasn't explicitly un-checked defaults (we aren't tracking that specifically currently,
+            // but we track that this effect only runs once via hasAutoSelectedDefaultsRef)
+            hasAutoSelectedDefaultsRef.current = true;
+            return [...new Set([...prev, ...defaultItems.map(i => i.id)])];
+        });
+    }, [effectiveOptions, disableAutoSelect]);
 
     // Clear error message when popup closes
     React.useEffect(() => {
