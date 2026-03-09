@@ -1640,31 +1640,54 @@ export default function Billing() {
                     todaysVisitDate
                 });
                 if (cancelled) return;
-                // Extract visitDate from visits array (priority: resp.visits)
-                let dates: string[] = [];
-                if (resp?.success && Array.isArray(resp?.visits)) {
-                    // Parse visits array and extract visitDate
-                    dates = resp.visits
-                        .map((visit: any) => visit?.visitDate || visit?.visit_date || visit?.Visit_Date)
-                        .filter((d: any) => d && String(d).trim() !== '')
-                        .map((d: any) => String(d));
-                } else {
-                    // Fallback to previous parsing logic
-                    const tryArrays: any[] = [];
-                    if (Array.isArray(resp)) tryArrays.push(resp);
-                    if (Array.isArray(resp?.dates)) tryArrays.push(resp.dates);
-                    if (Array.isArray(resp?.resultSet1)) tryArrays.push(resp.resultSet1);
-                    if (Array.isArray(resp?.visits)) tryArrays.push(resp.visits);
-                    const firstArray = tryArrays.find(arr => Array.isArray(arr)) || [];
-                    if (firstArray.length > 0) {
-                        dates = firstArray.map((item: any) => {
-                            if (typeof item === 'string') return item;
-                            const d = item?.visitDate || item?.visit_date || item?.Visit_Date || item?.appointmentDate || item?.appointment_date || item?.serviceDate || item?.date;
-                            return d ? String(d) : '';
-                        }).filter((s: string) => !!s);
-                    }
+
+                // Extract all possible visits from response
+                const allVisitsArr: any[] = [];
+                if (Array.isArray(resp?.visits)) allVisitsArr.push(...resp.visits);
+                if (Array.isArray(resp?.resultSet1)) allVisitsArr.push(...resp.resultSet1);
+                if (Array.isArray(resp?.dates)) allVisitsArr.push(...resp.dates);
+                if (Array.isArray(resp)) {
+                    if (Array.isArray(resp)) allVisitsArr.push(...resp);
                 }
-                setPastServiceDates(dates);
+
+                const normalizeDate = (d: any): string => {
+                    if (!d) return '';
+                    const s = String(d);
+                    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.split(/[ T]/)[0];
+                    return s.split(/[ T]/)[0];
+                };
+
+                // Filter dates: only show those that have actual "Services" items
+                const filteredResults = await Promise.all(allVisitsArr.map(async (v: any) => {
+                    try {
+                        const dRaw = typeof v === 'string' ? v : (v?.visitDate || v?.visit_date || v?.Visit_Date || v?.appointmentDate || v?.appointment_date || v?.serviceDate || v?.date);
+                        const n = v?.patientVisitNo || v?.patient_visit_no || v?.visit_number || v?.visitNo || v?.visit_no || v?.VisitNo;
+                        const sId = v?.shiftId || v?.shift_id || (sessionData as any)?.shiftId || 1;
+
+                        if (!dRaw || n === undefined || n === null) return null;
+
+                        const itemsResp: any = await patientService.getPreviousServiceVisitItems({
+                            patientId: String(treatmentData.patientId),
+                            doctorId: String(sessionData?.doctorId || ''),
+                            clinicId: String(sessionData?.clinicId),
+                            shiftId: Number(sId),
+                            visitNo: Number(n),
+                            visitDate: normalizeDate(dRaw)
+                        });
+
+                        const items: any[] = Array.isArray(itemsResp?.items) ? itemsResp.items : (Array.isArray(itemsResp) ? itemsResp : []);
+                        const hasServiceItem = items.some((it: any) =>
+                            String(it.details || it.description || it.service_description || it.item || '').trim().toLowerCase() === "services"
+                        );
+                        return hasServiceItem ? normalizeDate(dRaw) : null;
+                    } catch (err) {
+                        return null;
+                    }
+                }));
+
+                // Deduplicate dates and remove nulls
+                const uniqueDates = Array.from(new Set(filteredResults.filter((d): d is string => d !== null)));
+                if (!cancelled) setPastServiceDates(uniqueDates);
             } catch (e: any) {
                 if (!cancelled) setPastServicesError(e?.message || 'Failed to load past services');
             } finally {
