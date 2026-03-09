@@ -1297,6 +1297,7 @@ export default function AppointmentTable() {
             followUp: toStr(get(visit, 'followup_label', 'Follow_Up', 'followUp', 'follow_up', 'Follow_Up', 'next_visit')),
             followUpDate: toStr(get(visit, 'followup_date', 'Follow_Up_Date', 'followUpDate', 'follow_up_date', 'Follow_Up_Date', 'next_visit_date')),
             remark: toStr(get(visit, 'remark', 'Remark', 'remarks', 'Remarks', 'notes', 'Notes', 'comments', 'Comments')),
+            status: appointmentRow?.status || get(visit, 'Status', 'status', 'status_description') || '',
             // Include the full raw visit payload for access to all fields
             rawVisit: visit
         };
@@ -1403,7 +1404,8 @@ export default function AppointmentTable() {
                     followUpType: '',
                     followUp: '',
                     followUpDate: '',
-                    remark: ''
+                    remark: '',
+                    status: appointmentRow.status || ''
                 } : null;
                 console.log('Basic form data (no previous visit):', basicData);
                 console.log('Provider in basic data:', basicData?.provider);

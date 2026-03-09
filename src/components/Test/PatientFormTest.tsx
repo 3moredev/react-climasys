@@ -331,10 +331,8 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
 
                 if (isConsultOnCall) {
                     patched.inPerson = false;
-                } else if ('inPerson' in initialData) {
-                    // Respect initialData if it's not a consult on call
-                    patched.inPerson = Boolean(initialData.inPerson);
                 } else {
+                    // For all other statuses, it should be ticked
                     patched.inPerson = true;
                 }
                 console.log("PatientFormTest: Patched inPerson from status:", patched.inPerson, "for status:", statusVal);
