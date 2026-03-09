@@ -2865,7 +2865,7 @@ export default function Billing() {
             }
 
             if (result.success) {
-                const successMessage = `Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`;
+                const successMessage = `Collections ${isSubmit ? 'submitted' : 'saved'} successfully!`;
                 setSnackbarMessage(successMessage);
                 setSnackbarOpen(true);
                 if (isSubmit) {
