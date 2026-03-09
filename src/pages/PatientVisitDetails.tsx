@@ -1330,6 +1330,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             }
         }
 
+        // Doctor Name validation for Doctor Referral
+        if (isDoctorReferral()) {
+            if ((formData.referralName || referralNameSearch) && !selectedDoctor) {
+                errors.referralName = 'Please select a valid doctor from list';
+            } else if (!formData.referralName && !referralNameSearch) {
+                errors.referralName = 'Doctor Name is required when Referred By is Doctor';
+            }
+        }
+
         // Generic Max Length Checks
         const fieldsToCheck = [
             'visitComments', 'currentMedicines', 'referralName',
@@ -1943,7 +1952,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                             }}
                                         />
                                         {/* Search Results Dropdown */}
-                                        {!selectedDoctor && referralNameOptions.length > 0 && (
+                                        {!selectedDoctor && referralNameSearch.length > 0 && (
                                             <Box sx={{
                                                 position: 'absolute',
                                                 top: '44px',
@@ -1956,33 +1965,48 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 maxHeight: '200px',
                                                 overflowY: 'auto'
                                             }}>
-                                                {referralNameOptions.map((option) => (
-                                                    <Box
-                                                        key={option.id}
-                                                        onMouseDown={() => {
-                                                            console.log('DEBUG: Doctor selected from list', option)
-                                                            setSelectedDoctor((option as any).fullData);
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                referralName: option.name,
-                                                                referralContact: (option as any).fullData?.doctorMob || '',
-                                                                referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                            }));
-                                                            setReferralNameSearch(option.name);
-                                                            setReferralNameOptions([]);
-                                                        }}
-                                                        sx={{
-                                                            padding: '8px 12px',
-                                                            cursor: 'pointer',
-                                                            fontSize: '14px',
-                                                            borderBottom: '1px solid #f0f0f0',
-                                                            '&:hover': { backgroundColor: '#f5f5f5' }
-                                                        }}
-                                                    >
-                                                        {option.name}
-                                                    </Box>
-                                                ))}
+                                                {referralNameOptions.length > 0 ? (
+                                                    referralNameOptions.map((option) => (
+                                                        <Box
+                                                            key={option.id}
+                                                            onMouseDown={() => {
+                                                                console.log('DEBUG: Doctor selected from list', option)
+                                                                setSelectedDoctor((option as any).fullData);
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    referralName: option.name,
+                                                                    referralContact: (option as any).fullData?.doctorMob || '',
+                                                                    referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                    referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                                }));
+                                                                setReferralNameSearch(option.name);
+                                                                setReferralNameOptions([]);
+                                                            }}
+                                                            sx={{
+                                                                padding: '8px 12px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '14px',
+                                                                borderBottom: '1px solid #f0f0f0',
+                                                                '&:hover': { backgroundColor: '#f5f5f5' }
+                                                            }}
+                                                        >
+                                                            {option.name}
+                                                        </Box>
+                                                    ))
+                                                ) : (
+                                                    !isSearchingReferral && !validationErrors.referralName && (
+                                                        <Box
+                                                            sx={{
+                                                                padding: '8px 12px',
+                                                                fontSize: '14px',
+                                                                color: 'rgb(119, 119, 119)',
+                                                                textAlign: 'center'
+                                                            }}
+                                                        >
+                                                            No records found
+                                                        </Box>
+                                                    )
+                                                )}
                                             </Box>
                                         )}
                                     </Box>
