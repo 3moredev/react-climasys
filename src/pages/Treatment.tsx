@@ -1870,6 +1870,7 @@ export default function Treatment() {
                     visit_type_description: item.visit_type_description,
                     visit_type_id: item.visit_type_id,
                     isdefault: Boolean(item.isdefault),
+                    is_default: Boolean(item.isDefault || item.Is_Default || item.is_default || item.isdefault || false),
                     sequence_no: typeof item.sequence_no === 'number' ? item.sequence_no : Number(item.sequence_no ?? idx)
                 }));
                 if (!cancelled) setBillingDetailsOptions(mapped);
