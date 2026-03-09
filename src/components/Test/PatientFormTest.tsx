@@ -627,23 +627,14 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     console.log('PatientFormTest: Patched dressing from rawVisit.Dressing:', patched.dressing);
                 }
 
-                // Referred By: prioritize initialData (passed from Appointment Row)
-                if (initialData?.referredBy && initialData.referredBy.trim() !== '') {
-                    patched.referredBy = initialData.referredBy;
-                    console.log('PatientFormTest: Patched referredBy from initialData:', patched.referredBy);
-                } else if (patched.rawVisit) {
+                // Referred By: always resolve from rawVisit (referBy code + referralName) first for accuracy
+                {
                     const getRef = (obj: any, ...keys: string[]) => {
                         for (const k of keys) {
-                            if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') return obj[k];
+                            if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') return String(obj[k]).trim();
                         }
                         return '';
                     };
-
-                    const refCodeRaw = getRef(patched.rawVisit, 'referralBy', 'referredBy', 'Refer_By', 'refer_by', 'refer_id', 'referralCode', 'referral_code', 'referral_by', 'ReferBy', 'ReferId', 'referBy');
-                    const refNameRaw = getRef(patched.rawVisit, 'Refer_Doctor_Details', 'refer_doctor_details', 'ReferDoctorDetails', 'referralName', 'referral_name', 'referred_by', 'Referred_By', 'referredBy', 'ReferredBy');
-
-                    const refCode = String(refCodeRaw).trim().toUpperCase();
-                    const refName = String(refNameRaw).trim();
 
                     const staticMap: Record<string, string> = {
                         'D': 'Doctor', '1': 'Doctor', 'DOCTOR': 'Doctor',
@@ -653,13 +644,38 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         'I': 'Internet', '5': 'Internet', 'INTERNET': 'Internet'
                     };
 
-                    if (refCode && staticMap[refCode]) {
-                        patched.referredBy = staticMap[refCode];
+                    // Step 1: try to get the category CODE from rawVisit
+                    // rawVisit uses "Refer_ID" as the field name (e.g. "F", "S", "D", "I")
+                    const refCodeRaw = patched.rawVisit
+                        ? getRef(patched.rawVisit, 'Refer_ID', 'referBy', 'Refer_By', 'refer_by', 'referralCode', 'referral_code', 'referral_by', 'ReferBy', 'ReferId', 'referralBy')
+                        : '';
+
+                    // Step 2: try to get the referral NAME from rawVisit
+                    const refNameRaw = patched.rawVisit
+                        ? getRef(patched.rawVisit, 'referralName', 'Refer_Doctor_Details', 'refer_doctor_details', 'ReferDoctorDetails', 'referral_name', 'referred_by', 'Referred_By', 'ReferredBy')
+                        : '';
+
+                    const refCode = refCodeRaw.toUpperCase();
+                    const refName = refNameRaw;
+                    const categoryLabel = staticMap[refCode] || '';
+
+                    console.log('PatientFormTest referredBy:', { refCode, refName, categoryLabel, rawVisit: patched.rawVisit });
+
+                    if (categoryLabel && refName) {
+                        // Both code and name present: e.g. "Self - wdwwd"
+                        patched.referredBy = `${categoryLabel} - ${refName}`;
+                    } else if (categoryLabel) {
+                        // Only code: e.g. "Self"
+                        patched.referredBy = categoryLabel;
                     } else if (refName) {
-                        const matchedLabel = Object.values(staticMap).find(label => refName.toUpperCase() === label.toUpperCase());
+                        // Only name (no recognizable code)
+                        const matchedLabel = Object.values(staticMap).find(l => refName.toUpperCase() === l.toUpperCase());
                         patched.referredBy = matchedLabel || refName;
+                    } else if (initialData?.referredBy && initialData.referredBy.trim() !== '') {
+                        // Final fallback: use whatever the parent passed
+                        patched.referredBy = initialData.referredBy;
                     }
-                    console.log('PatientFormTest: Final referredBy patched from rawVisit:', patched.referredBy);
+                    console.log('PatientFormTest: Final referredBy:', patched.referredBy);
                 }
 
                 // Receipt fields: Receipt No / Receipt Date / Remark
