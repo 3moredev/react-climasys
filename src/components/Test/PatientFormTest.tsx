@@ -329,13 +329,27 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 const statusVal = patched.status || getStatus(patched.rawVisit);
                 const isConsultOnCall = statusVal === 'CONSULT ON CALL' || statusVal === 'ON CALL';
 
-                if (isConsultOnCall) {
+                // Prioritize API/DB value from rawVisit if it exists
+                const rawInPersonValue = patched.rawVisit ? (patched.rawVisit.inPerson ?? patched.rawVisit.In_Person ?? patched.rawVisit.in_person) : undefined;
+
+                if (rawInPersonValue !== undefined && rawInPersonValue !== null) {
+                    // Use the database value if present (e.g., for "COMPLETE" visits)
+                    if (typeof rawInPersonValue === 'string') {
+                        const lower = rawInPersonValue.toLowerCase().trim();
+                        patched.inPerson = !(lower === 'false' || lower === '0' || lower === 'no' || lower === '');
+                    } else {
+                        patched.inPerson = Boolean(rawInPersonValue);
+                    }
+                    console.log("PatientFormTest: Patched inPerson from rawVisit DB value:", patched.inPerson);
+                } else if (isConsultOnCall) {
+                    // Fallback to status logic if no DB value exists
                     patched.inPerson = false;
+                    console.log("PatientFormTest: Patched inPerson from status:", patched.inPerson, "for status:", statusVal);
                 } else {
-                    // For all other statuses, it should be ticked
+                    // For all other statuses, default to ticked
                     patched.inPerson = true;
+                    console.log("PatientFormTest: Defaulted inPerson to true for status:", statusVal);
                 }
-                console.log("PatientFormTest: Patched inPerson from status:", patched.inPerson, "for status:", statusVal);
 
 
                 // Map prescriptions from API format to component format
