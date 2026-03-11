@@ -52,12 +52,13 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   const [instructionGroups, setInstructionGroups] = useState<InstructionGroup[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<{
-    instructionGroups: string;
-    searchTerm: string;
+    instructionGroups?: string;
+    searchTerm?: string;
   }>({
     instructionGroups: '',
     searchTerm: '',
   });
+  const instructionGroupsErrorTimerRef = useRef<any>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('error');
   const [showSnackbar, setShowSnackbar] = useState(false);
@@ -220,6 +221,10 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   const handleAddGroups = () => {
     if (selectedGroupIds.length === 0) {
       setErrors(prev => ({ ...prev, instructionGroups: 'Please select at least one group' }));
+      clearTimeout(instructionGroupsErrorTimerRef.current);
+      instructionGroupsErrorTimerRef.current = setTimeout(() => {
+        setErrors(prev => ({ ...prev, instructionGroups: '' }));
+      }, 3000);
       return;
     }
 
@@ -230,6 +235,10 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
     if (newGroups.length === 0) {
       setErrors(prev => ({ ...prev, instructionGroups: 'These groups are already added' }));
+      clearTimeout(instructionGroupsErrorTimerRef.current);
+      instructionGroupsErrorTimerRef.current = setTimeout(() => {
+        setErrors(prev => ({ ...prev, instructionGroups: '' }));
+      }, 3000);
       return;
     }
 

@@ -595,6 +595,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const handleAddResult = () => {
         if (selectedLabTests.length === 0) {
             setDropdownError('Please select at least one lab test');
+            clearTimeout(dropdownErrorTimerRef.current);
+            dropdownErrorTimerRef.current = setTimeout(() => setDropdownError(null), 3000);
             return;
         }
         setDropdownError(null);
@@ -633,6 +635,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
 
         if (resultsToAdd.length === 0) {
             setDropdownError('Selected lab tests are already added');
+            clearTimeout(dropdownErrorTimerRef.current);
+            dropdownErrorTimerRef.current = setTimeout(() => setDropdownError(null), 3000);
             return;
         }
 
