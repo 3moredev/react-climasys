@@ -602,6 +602,10 @@ export default function Treatment() {
     const [investigationsError, setInvestigationsError] = useState<string | null>(null);
     const [investigationSearchError, setInvestigationSearchError] = useState<string | null>(null);
     const investigationSearchErrorTimerRef = useRef<any>(null);
+    const complaintsErrorTimerRef = useRef<any>(null);
+    const diagnosesErrorTimerRef = useRef<any>(null);
+    const medicinesErrorTimerRef = useRef<any>(null);
+    const investigationsErrorTimerRef = useRef<any>(null);
 
     const filteredInvestigations = React.useMemo(() => {
         const term = investigationSearch.trim().toLowerCase();
@@ -2840,6 +2844,8 @@ export default function Treatment() {
     const handleAddComplaints = () => {
         if (selectedComplaints.length === 0) {
             setComplaintsSelectionError('Please select at least one complaint');
+            clearTimeout(complaintsErrorTimerRef.current);
+            complaintsErrorTimerRef.current = setTimeout(() => setComplaintsSelectionError(null), 3000);
             return;
         }
 
@@ -2857,6 +2863,8 @@ export default function Treatment() {
 
         if (allAlreadyAdded) {
             setComplaintsSelectionError('Selected complaints are already added');
+            clearTimeout(complaintsErrorTimerRef.current);
+            complaintsErrorTimerRef.current = setTimeout(() => setComplaintsSelectionError(null), 3000);
             return;
         }
 
@@ -5007,6 +5015,8 @@ export default function Treatment() {
     const handleAddDiagnoses = () => {
         if (selectedDiagnoses.length === 0) {
             setDiagnosesSelectionError('Please select at least one diagnosis');
+            clearTimeout(diagnosesErrorTimerRef.current);
+            diagnosesErrorTimerRef.current = setTimeout(() => setDiagnosesSelectionError(null), 3000);
             return;
         }
 
@@ -5024,6 +5034,8 @@ export default function Treatment() {
 
         if (allAlreadyAdded) {
             setDiagnosesSelectionError('Selected diagnoses are already added');
+            clearTimeout(diagnosesErrorTimerRef.current);
+            diagnosesErrorTimerRef.current = setTimeout(() => setDiagnosesSelectionError(null), 3000);
             return;
         }
 
@@ -5092,6 +5104,8 @@ export default function Treatment() {
     const handleAddMedicine = () => {
         if (selectedMedicines.length === 0) {
             setMedicinesSelectionError('Please select at least one medicine');
+            clearTimeout(medicinesErrorTimerRef.current);
+            medicinesErrorTimerRef.current = setTimeout(() => setMedicinesSelectionError(null), 3000);
             return;
         }
 
@@ -5105,6 +5119,8 @@ export default function Treatment() {
 
         if (allAlreadyAdded) {
             setMedicinesSelectionError('Selected medicines are already added');
+            clearTimeout(medicinesErrorTimerRef.current);
+            medicinesErrorTimerRef.current = setTimeout(() => setMedicinesSelectionError(null), 3000);
             return;
         }
 
@@ -5145,6 +5161,8 @@ export default function Treatment() {
                 // Show error if duplicates found
                 if (duplicateMedicines.length > 0) {
                     setMedicinesSelectionError(`The following medicine(s) are already added: ${duplicateMedicines.join(', ')}`);
+                    clearTimeout(medicinesErrorTimerRef.current);
+                    medicinesErrorTimerRef.current = setTimeout(() => setMedicinesSelectionError(null), 3000);
                 } else {
                     setMedicinesSelectionError(null);
                 }
@@ -5270,6 +5288,8 @@ export default function Treatment() {
     const handleAddInvestigations = () => {
         if (selectedInvestigations.length === 0) {
             setInvestigationsSelectionError('Please select at least one investigation');
+            clearTimeout(investigationsErrorTimerRef.current);
+            investigationsErrorTimerRef.current = setTimeout(() => setInvestigationsSelectionError(null), 3000);
             return;
         }
         // Check if all selected are already added
@@ -5281,6 +5301,8 @@ export default function Treatment() {
         });
         if (!hasNewItems) {
             setInvestigationsSelectionError('Selected investigations are already added');
+            clearTimeout(investigationsErrorTimerRef.current);
+            investigationsErrorTimerRef.current = setTimeout(() => setInvestigationsSelectionError(null), 3000);
             return;
         }
         setInvestigationsSelectionError(null);
@@ -5305,6 +5327,8 @@ export default function Treatment() {
             // Show error if partial duplicates found
             if (duplicateInvestigations.length > 0) {
                 setInvestigationsSelectionError(`The following investigation(s) are already added: ${duplicateInvestigations.join(', ')}`);
+                clearTimeout(investigationsErrorTimerRef.current);
+                investigationsErrorTimerRef.current = setTimeout(() => setInvestigationsSelectionError(null), 3000);
             }
 
             return [...prev, ...newRows];

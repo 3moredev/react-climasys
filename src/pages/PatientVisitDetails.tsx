@@ -149,6 +149,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
     const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
     const [initialComplaintsFromApi, setInitialComplaintsFromApi] = useState<string | null>(null);
+    const complaintsErrorTimerRef = useRef<any>(null);
 
     // Check ref to store the computed follow-up state for restoration on Reset
     const computedFollowUp = React.useRef<{ followUp: boolean, followUpType: string } | null>(null);
@@ -156,6 +157,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const handleAddComplaints = () => {
         if (selectedComplaints.length === 0) {
             setComplaintsSelectionError('Please select at least one complaint');
+            clearTimeout(complaintsErrorTimerRef.current);
+            complaintsErrorTimerRef.current = setTimeout(() => setComplaintsSelectionError(null), 3000);
             return;
         }
         // Check if all selected are already added
@@ -163,6 +166,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         const hasNewItems = selectedComplaints.some(val => !existingValues.has(val));
         if (!hasNewItems) {
             setComplaintsSelectionError('Selected complaints are already added');
+            clearTimeout(complaintsErrorTimerRef.current);
+            complaintsErrorTimerRef.current = setTimeout(() => setComplaintsSelectionError(null), 3000);
             return;
         }
         setComplaintsSelectionError(null);
