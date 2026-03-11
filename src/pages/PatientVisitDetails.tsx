@@ -2998,35 +2998,28 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             width: '20%',
                                                             verticalAlign: 'top'
                                                         }}>
-                                                            <button
+                                                            <div
                                                                 onClick={() => !readOnly && handleRemoveComplaint(row.value)}
+                                                                title="Remove"
                                                                 style={{
-                                                                    background: 'none',
-                                                                    border: 'none',
-                                                                    cursor: 'pointer',
-                                                                    color: '#f44336',
-                                                                    padding: '6px',
-                                                                    borderRadius: '4px',
-                                                                    display: 'flex',
+                                                                    display: 'inline-flex',
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
-                                                                    margin: '0 auto'
+                                                                    width: '24px',
+                                                                    height: '24px',
+                                                                    cursor: readOnly ? 'not-allowed' : 'pointer',
+                                                                    color: readOnly ? '#9e9e9e' : '#000000',
+                                                                    backgroundColor: 'transparent'
                                                                 }}
                                                                 onMouseEnter={(e) => {
-                                                                    if (!readOnly) {
-                                                                        e.currentTarget.style.backgroundColor = '#ffebee';
-                                                                    }
+                                                                    if (!readOnly) (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
                                                                 }}
                                                                 onMouseLeave={(e) => {
-                                                                    if (!readOnly) {
-                                                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                                                    }
+                                                                    if (!readOnly) (e.currentTarget as HTMLDivElement).style.color = '#000000';
                                                                 }}
-                                                                title="Remove"
-                                                                disabled={readOnly}
                                                             >
-                                                                <Delete fontSize="small" style={{ color: 'black' }} />
-                                                            </button>
+                                                                <Delete fontSize="small" />
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}

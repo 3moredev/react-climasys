@@ -1559,23 +1559,26 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                         }}>
                                             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                                 <thead>
-                                                    <tr style={{ backgroundColor: '#f5f5f5' }}>
+                                                    <tr style={{
+                                                        backgroundColor: '#1976d2',
+                                                        color: 'white',
+                                                        fontWeight: 'bold',
+                                                        fontSize: '13px'
+                                                    }}>
                                                         <th style={{
-                                                            padding: '16px',
+                                                            padding: '12px 16px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
-                                                            fontWeight: '400',
-                                                            color: 'black',
+                                                            color: 'white',
                                                             width: '30%'
                                                         }}>
                                                             Lab Test Name
                                                         </th>
                                                         <th style={{
-                                                            padding: '16px',
+                                                            padding: '12px 16px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
-                                                            fontWeight: '400',
-                                                            color: 'black',
+                                                            color: 'white',
                                                             width: '30%'
                                                         }}>
                                                             Parameter Name
@@ -1584,18 +1587,16 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             padding: '12px 10px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
-                                                            fontWeight: '400',
-                                                            color: 'black',
+                                                            color: 'white',
                                                             width: '30%'
                                                         }}>
-                                                            Value / Results <span style={{ color: 'red' }}>*</span>
+                                                            Value / Results <span style={{ color: 'white' }}>*</span>
                                                         </th>
                                                         <th style={{
-                                                            padding: '16px',
+                                                            padding: '12px 16px',
                                                             textAlign: 'center',
                                                             borderBottom: '1px solid #ddd',
-                                                            fontWeight: '400',
-                                                            color: 'black',
+                                                            color: 'white',
                                                             width: '10%'
                                                         }}>
                                                             Action
@@ -1679,29 +1680,28 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     width: '10%',
                                                                     // verticalAlign: 'top'
                                                                 }}>
-                                                                    <button
+                                                                    <div
                                                                         onClick={() => handleRemoveResult(result.id)}
+                                                                        title="Remove"
                                                                         style={{
-                                                                            background: 'none',
-                                                                            border: 'none',
-                                                                            cursor: 'pointer',
-                                                                            color: '#f44336',
-                                                                            padding: '6px',
-                                                                            borderRadius: '4px',
-                                                                            display: 'flex',
+                                                                            display: 'inline-flex',
                                                                             alignItems: 'center',
                                                                             justifyContent: 'center',
-                                                                            margin: '0 auto'
+                                                                            width: '24px',
+                                                                            height: '24px',
+                                                                            cursor: 'pointer',
+                                                                            color: '#000000',
+                                                                            backgroundColor: 'transparent'
                                                                         }}
                                                                         onMouseEnter={(e) => {
-                                                                            e.currentTarget.style.backgroundColor = '#ffebee';
+                                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
                                                                         }}
                                                                         onMouseLeave={(e) => {
-                                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                                            (e.currentTarget as HTMLDivElement).style.color = '#000000';
                                                                         }}
                                                                     >
-                                                                        <Delete fontSize="small" style={{ color: 'black' }} />
-                                                                    </button>
+                                                                        <Delete fontSize="small" />
+                                                                    </div>
                                                                 </td>
                                                             </tr>
                                                         ))}
