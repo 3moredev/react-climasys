@@ -58,7 +58,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     instructionGroups: '',
     searchTerm: '',
   });
-  const instructionGroupsErrorTimerRef = useRef<any>(null);
+  const instructionGroupsErrorTimerRef = React.useRef<any>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('error');
   const [showSnackbar, setShowSnackbar] = useState(false);

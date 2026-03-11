@@ -149,7 +149,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
     const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
     const [initialComplaintsFromApi, setInitialComplaintsFromApi] = useState<string | null>(null);
-    const complaintsErrorTimerRef = useRef<any>(null);
+    const complaintsErrorTimerRef = React.useRef<any>(null);
 
     // Check ref to store the computed follow-up state for restoration on Reset
     const computedFollowUp = React.useRef<{ followUp: boolean, followUpType: string } | null>(null);

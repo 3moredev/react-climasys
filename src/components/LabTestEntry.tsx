@@ -75,6 +75,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [resultErrors, setResultErrors] = useState<Set<string>>(new Set());
     const [dropdownError, setDropdownError] = useState<string | null>(null);
+    const dropdownErrorTimerRef = React.useRef<any>(null);
 
     // Dynamic Lab Test selector states (options now include parameters for each test)
     type LabTestParameter = { id: string; name: string };
