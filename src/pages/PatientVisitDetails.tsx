@@ -2460,7 +2460,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         justifyContent: 'space-between',
                                                         height: '40px',
                                                         padding: '4px 8px',
-                                                        border: complaintsSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
+                                                        border: complaintsSelectionError ? '2px solid #B7B7B7' : '2px solid #B7B7B7',
                                                         borderRadius: '8px',
                                                         fontSize: '12px',
                                                         fontFamily: "'Roboto', sans-serif",
@@ -2473,12 +2473,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!readOnly) {
-                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#d32f2f' : '#1E88E5';
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#B7B7B7' : '#1E88E5';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!readOnly) {
-                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#d32f2f' : '#B7B7B7';
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#B7B7B7' : '#B7B7B7';
                                                         }
                                                     }}
                                                 >
@@ -2536,7 +2536,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                         width: '100%',
                                                                         height: '28px',
                                                                         padding: '4px 28px 4px 8px',
-                                                                        border: complaintSearchError ? '1px solid #d32f2f' : '1px solid #B7B7B7',
+                                                                        border: complaintSearchError ? '1px solid #B7B7B7' : '1px solid #B7B7B7',
                                                                         borderRadius: '4px',
                                                                         fontSize: '12px',
                                                                         outline: 'none',
@@ -2546,7 +2546,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                         (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
                                                                     }}
                                                                     onBlur={(e) => {
-                                                                        (e.target as HTMLInputElement).style.borderColor = complaintSearchError ? '#d32f2f' : '#B7B7B7';
+                                                                        (e.target as HTMLInputElement).style.borderColor = complaintSearchError ? '#B7B7B7' : '#B7B7B7';
                                                                     }}
                                                                 />
                                                                 {complaintSearch && !readOnly && (
@@ -2700,7 +2700,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 )}
                                                 {complaintsSelectionError && (
                                                     <p style={{
-                                                        color: '#d32f2f',
+                                                        color: '#666',
                                                         fontSize: '0.75rem',
                                                         fontWeight: 400,
                                                         fontFamily: "'Roboto', sans-serif",
