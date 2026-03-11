@@ -6121,7 +6121,7 @@ export default function Treatment() {
                                                         justifyContent: 'space-between',
                                                         height: '38px',
                                                         padding: '4px 8px',
-                                                        border: complaintsSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
+                                                        border: complaintsSelectionError ? '2px solid #B7B7B7' : '2px solid #B7B7B7',
                                                         borderRadius: '6px',
                                                         fontSize: '13px',
                                                         fontFamily: "'Roboto', sans-serif",
@@ -6133,12 +6133,12 @@ export default function Treatment() {
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!isFormDisabled) {
-                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#d32f2f' : '#1E88E5';
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#B7B7B7' : '#1E88E5';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!isFormDisabled) {
-                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#d32f2f' : '#B7B7B7';
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#B7B7B7' : '#B7B7B7';
                                                         }
                                                     }}
                                                 >
@@ -6159,7 +6159,7 @@ export default function Treatment() {
                                                 </div>
                                                 {complaintsSelectionError && (
                                                     <p style={{
-                                                        color: '#d32f2f',
+                                                        color: '#666',
                                                         fontSize: '0.75rem',
                                                         fontWeight: 400,
                                                         fontFamily: "'Roboto', sans-serif",
@@ -6830,7 +6830,7 @@ export default function Treatment() {
                                                 justifyContent: 'space-between',
                                                 height: '38px',
                                                 padding: '4px 8px',
-                                                border: diagnosesSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
+                                                border: diagnosesSelectionError ? '2px solid #B7B7B7' : '2px solid #B7B7B7',
                                                 borderRadius: '6px',
                                                 fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
@@ -6843,12 +6843,12 @@ export default function Treatment() {
                                             onClick={() => !isFormDisabled && setIsDiagnosesOpen(!isDiagnosesOpen)}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = diagnosesSelectionError ? '#d32f2f' : '#1E88E5';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = diagnosesSelectionError ? '#B7B7B7' : '#1E88E5';
                                                 }
                                             }}
                                             onMouseLeave={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = diagnosesSelectionError ? '#d32f2f' : '#B7B7B7';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = diagnosesSelectionError ? '#B7B7B7' : '#B7B7B7';
                                                 }
                                             }}
                                         >
@@ -6870,7 +6870,7 @@ export default function Treatment() {
                                         </div>
                                         {diagnosesSelectionError && (
                                             <p style={{
-                                                color: '#d32f2f',
+                                                color: '#666',
                                                 fontSize: '0.75rem',
                                                 fontWeight: 400,
                                                 fontFamily: "'Roboto', sans-serif",
@@ -7184,7 +7184,7 @@ export default function Treatment() {
                                                 justifyContent: 'space-between',
                                                 height: '38px',
                                                 padding: '4px 8px',
-                                                border: medicinesSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
+                                                border: medicinesSelectionError ? '2px solid #B7B7B7' : '2px solid #B7B7B7',
                                                 borderRadius: '6px',
                                                 fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
@@ -7196,12 +7196,12 @@ export default function Treatment() {
                                             }}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = medicinesSelectionError ? '#d32f2f' : '#1E88E5';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = medicinesSelectionError ? '#B7B7B7' : '#1E88E5';
                                                 }
                                             }}
                                             onMouseLeave={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = medicinesSelectionError ? '#d32f2f' : '#B7B7B7';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = medicinesSelectionError ? '#B7B7B7' : '#B7B7B7';
                                                 }
                                             }}
                                         >
@@ -7222,7 +7222,7 @@ export default function Treatment() {
                                         </div>
                                         {medicinesSelectionError && (
                                             <p style={{
-                                                color: '#d32f2f',
+                                                color: '#666',
                                                 fontSize: '0.75rem',
                                                 fontWeight: 400,
                                                 fontFamily: "'Roboto', sans-serif",
@@ -8194,7 +8194,7 @@ export default function Treatment() {
                                                 justifyContent: 'space-between',
                                                 height: '38px',
                                                 padding: '4px 8px',
-                                                border: investigationsSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
+                                                border: investigationsSelectionError ? '2px solid #B7B7B7' : '2px solid #B7B7B7',
                                                 borderRadius: '6px',
                                                 fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
@@ -8207,12 +8207,12 @@ export default function Treatment() {
                                             onClick={() => !isFormDisabled && setIsInvestigationsOpen(!isInvestigationsOpen)}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = investigationsSelectionError ? '#d32f2f' : '#1E88E5';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = investigationsSelectionError ? '#B7B7B7' : '#1E88E5';
                                                 }
                                             }}
                                             onMouseLeave={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = investigationsSelectionError ? '#d32f2f' : '#B7B7B7';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = investigationsSelectionError ? '#B7B7B7' : '#B7B7B7';
                                                 }
                                             }}
                                         >
@@ -8235,7 +8235,7 @@ export default function Treatment() {
 
                                         {investigationsSelectionError && (
                                             <p style={{
-                                                color: '#d32f2f',
+                                                color: '#666',
                                                 fontSize: '0.75rem',
                                                 fontWeight: 400,
                                                 fontFamily: "'Roboto', sans-serif",

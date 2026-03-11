@@ -423,7 +423,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                 </div>
 
                 {errors.instructionGroups && (
-                  <div style={{ color: '#d32f2f', fontSize: '12px', marginTop: '4px' }}>
+                  <div style={{ color: '#666', fontSize: '12px', marginTop: '4px' }}>
                     {errors.instructionGroups}
                   </div>
                 )}

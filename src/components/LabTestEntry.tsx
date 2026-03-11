@@ -1310,7 +1310,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     justifyContent: 'space-between',
                                                     height: '32px',
                                                     padding: '4px 8px',
-                                                    border: dropdownError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
+                                                    border: dropdownError ? '2px solid #B7B7B7' : '2px solid #B7B7B7',
                                                     borderRadius: '6px',
                                                     fontSize: '12px',
                                                     fontFamily: "'Roboto', sans-serif",
@@ -1323,10 +1323,10 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     position: 'relative'
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.borderColor = dropdownError ? '#d32f2f' : '#1E88E5';
+                                                    e.currentTarget.style.borderColor = dropdownError ? '#B7B7B7' : '#1E88E5';
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.currentTarget.style.borderColor = dropdownError ? '#d32f2f' : '#B7B7B7';
+                                                    e.currentTarget.style.borderColor = dropdownError ? '#B7B7B7' : '#B7B7B7';
                                                 }}
                                             >
                                                 <span style={{ color: selectedLabTests.length ? '#000' : '#9e9e9e' }}>
@@ -1527,7 +1527,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                     </div>
                                     {dropdownError && (
                                         <p style={{
-                                            color: '#d32f2f',
+                                            color: '#666',
                                             fontSize: '0.75rem',
                                             margin: '2px 14px 0 0',
                                         }}>
@@ -1560,25 +1560,24 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                                 <thead>
                                                     <tr style={{
-                                                        backgroundColor: '#1976d2',
-                                                        color: 'white',
-                                                        fontWeight: 'bold',
-                                                        fontSize: '13px'
+                                                        backgroundColor: '#f5f5f5',
                                                     }}>
                                                         <th style={{
                                                             padding: '12px 16px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
-                                                            color: 'white',
+                                                            color: 'black',
+                                                            fontWeight: '400',
                                                             width: '30%'
                                                         }}>
                                                             Lab Test Name
                                                         </th>
                                                         <th style={{
-                                                            padding: '12px 16px',
+                                                            padding: '16px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
-                                                            color: 'white',
+                                                            color: 'black',
+                                                            fontWeight: '400',
                                                             width: '30%'
                                                         }}>
                                                             Parameter Name
@@ -1587,16 +1586,18 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             padding: '12px 10px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
-                                                            color: 'white',
+                                                            fontWeight: '400',
+                                                            color: 'black',
                                                             width: '30%'
                                                         }}>
-                                                            Value / Results <span style={{ color: 'white' }}>*</span>
+                                                            Value / Results <span style={{ color: 'red' }}>*</span>
                                                         </th>
                                                         <th style={{
-                                                            padding: '12px 16px',
+                                                            padding: '16px',
                                                             textAlign: 'center',
                                                             borderBottom: '1px solid #ddd',
-                                                            color: 'white',
+                                                            color: 'black',
+                                                            fontWeight: '400',
                                                             width: '10%'
                                                         }}>
                                                             Action
