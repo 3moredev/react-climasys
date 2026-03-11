@@ -3106,7 +3106,12 @@ export default function Billing() {
                             }}>
                                 Previous Visits ({previousVisits.length})
                             </div>
-                            <div style={{ padding: '0' }}>
+                            <div style={{
+                                padding: '0',
+                                maxHeight: '350px',
+                                overflowY: 'auto',
+                                borderTop: '1px solid #e0e0e0'
+                            }}>
                                 {loadingPreviousVisits ? (
                                     <div style={{
                                         padding: '20px',
@@ -4833,7 +4838,8 @@ export default function Billing() {
                     patientName: treatmentData.patientName,
                     gender: treatmentData.gender,
                     age: treatmentData.age,
-                    patientId: treatmentData.patientId
+                    patientId: treatmentData.patientId,
+                    mobileNo: treatmentData.contact
                 } : null}
                 sessionData={sessionData}
             />

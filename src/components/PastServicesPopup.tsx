@@ -19,6 +19,7 @@ interface PatientData {
     gender?: string;
     age?: number;
     patientId?: string;
+    mobileNo?: string;
 }
 
 interface PastServicesPopupProps {
@@ -173,13 +174,17 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
 
                 // Fetch master lists for services to patch payment details for this specific visit
                 try {
+                    const firstVisit = matchedVisits[0];
+                    const vNo = firstVisit.patientVisitNo || firstVisit.patient_visit_no || firstVisit.visit_number || firstVisit.visitNo || firstVisit.visit_no;
+                    const sId = firstVisit.shiftId || firstVisit.shift_id || (sessionData as any)?.shiftId || 1;
+
                     const params: MasterListsRequest = {
                         patientId: String(patientId),
-                        shiftId: Number(shiftId || 1),
+                        shiftId: Number(sId || 1),
                         clinicId: String(clinicId),
                         // doctorId: String(doctorId),
                         visitDate: targetDate, // YYYY-MM-DD
-                        patientVisitNo: Number(visitNo || 0)
+                        patientVisitNo: Number(vNo || 0)
                     } as MasterListsRequest;
 
                     console.log('Calling getMasterListsForServices with params:', params);
@@ -300,13 +305,20 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                     top: 0,
                     zIndex: 1000
                 }}>
-                    {/* Top row with close button */}
+                    {/* Top row with heading and close button */}
                     <div style={{
                         display: 'flex',
-                        justifyContent: 'flex-end',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
                         marginBottom: '8px'
                     }}>
+                        <div style={{
+                            fontSize: '20px',
+                            fontWeight: 'bold',
+
+                        }}>
+                            Past Services
+                        </div>
                         <button
                             onClick={onClose}
                             style={{
@@ -341,18 +353,21 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                         alignItems: 'center'
                     }}>
                         <div style={{
-                            color: '#4caf50',
-                            fontSize: '18px',
-                            fontWeight: '500',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px'
+                            gap: '20px'
                         }}>
-                            <span>{patientData?.patientName || 'Patient'}</span>
-                            <span>/</span>
-                            <span>{patientData?.gender || 'N/A'}</span>
-                            <span>/</span>
-                            <span>{patientData?.age || 0} Y</span>
+                            <div style={{
+                                color: '#4caf50',
+                                fontSize: '18px',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                textDecoration: 'underline'
+                            }}>
+                                {patientData?.patientName || 'Patient'} / {patientData?.gender || 'N/A'} / {patientData?.age || 0} Y / {patientData?.mobileNo || 'NA'}
+
+                            </div>
                         </div>
                         <div style={{
                             color: '#666',
@@ -368,7 +383,6 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                 <div style={{
                     display: 'flex',
                     flex: 1,
-                    minHeight: '500px',
                     overflow: 'hidden'
                 }}>
                     {/* Left Side - Past Services Box */}
@@ -442,149 +456,123 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 {error}
                             </div>
                         )}
-                        <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{
+                            border: '1px solid #ccc',
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            {/* Fixed Header Table */}
                             <table style={{
                                 width: '100%',
-                                borderCollapse: 'collapse'
+                                borderCollapse: 'collapse',
+                                tableLayout: 'fixed',
+                                backgroundColor: '#1976d2'
                             }}>
                                 <thead>
                                     <tr style={{
-                                        backgroundColor: '#1976d2',
                                         color: 'white',
                                         fontWeight: 'bold',
                                         fontSize: '11px'
                                     }}>
-                                        <th style={{
-                                            padding: '6px',
-                                            textAlign: 'left',
-                                            fontWeight: 'bold',
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            borderRight: '1px solid rgba(255,255,255,0.2)'
-                                        }}>
-                                            Sr.
-                                        </th>
-                                        <th style={{
-                                            padding: '6px',
-                                            textAlign: 'left',
-                                            fontWeight: 'bold',
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            borderRight: '1px solid rgba(255,255,255,0.2)'
-                                        }}>
-                                            Group
-                                        </th>
-                                        <th style={{
-                                            padding: '6px',
-                                            textAlign: 'left',
-                                            fontWeight: 'bold',
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            borderRight: '1px solid rgba(255,255,255,0.2)'
-                                        }}>
-                                            Sub-groups
-                                        </th>
-                                        <th style={{
-                                            padding: '6px',
-                                            textAlign: 'left',
-                                            fontWeight: 'bold',
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            borderRight: '1px solid rgba(255,255,255,0.2)'
-                                        }}>
-                                            Details
-                                        </th>
-                                        <th style={{
-                                            padding: '6px',
-                                            textAlign: 'center',
-                                            fontWeight: 'bold',
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            borderRight: '1px solid rgba(255,255,255,0.2)'
-                                        }}>
-                                            Select
-                                        </th>
-                                        <th style={{
-                                            padding: '6px',
-                                            textAlign: 'right',
-                                            fontWeight: 'bold',
-                                            backgroundColor: '#1976d2',
-                                            color: 'white'
-                                        }}>
-                                            Total Fees
-                                        </th>
+                                        <th style={{ padding: '6px', textAlign: 'left', width: '5%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</th>
+                                        <th style={{ padding: '6px', textAlign: 'left', width: '15%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Group</th>
+                                        <th style={{ padding: '6px', textAlign: 'left', width: '25%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sub-groups</th>
+                                        <th style={{ padding: '6px', textAlign: 'left', width: '30%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Details</th>
+                                        <th style={{ padding: '6px', textAlign: 'center', width: '10%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Select</th>
+                                        <th style={{ padding: '6px', textAlign: 'right', width: '15%' }}>Total Fees</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {services.map((service, index) => (
-                                        <tr key={index} style={{
-                                            borderBottom: '1px solid #e0e0e0',
-                                            backgroundColor: service.selected
-                                                ? '#eeeeee'
-                                                : (index % 2 === 0 ? '#f8f9fa' : 'white')
-                                        }}>
-                                            <td style={{
-                                                padding: '6px',
-                                                color: '#333',
-                                                fontSize: '12px',
-                                                borderRight: '1px solid #e0e0e0'
-                                            }}>
-                                                {service.sr}
-                                            </td>
-                                            <td style={{
-                                                padding: '6px',
-                                                color: '#333',
-                                                fontSize: '12px',
-                                                borderRight: '1px solid #e0e0e0'
-                                            }}>
-                                                {service.group}
-                                            </td>
-                                            <td style={{
-                                                padding: '6px',
-                                                color: '#333',
-                                                fontSize: '12px',
-                                                borderRight: '1px solid #e0e0e0'
-                                            }}>
-                                                {service.subGroup}
-                                            </td>
-                                            <td style={{
-                                                padding: '6px',
-                                                color: '#333',
-                                                fontSize: '12px',
-                                                borderRight: '1px solid #e0e0e0'
-                                            }}>
-                                                {service.details}
-                                            </td>
-                                            <td style={{
-                                                padding: '6px',
-                                                textAlign: 'center',
-                                                borderRight: '1px solid #e0e0e0'
-                                            }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={service.selected}
-                                                    onChange={() => handleSelectChange(index)}
-                                                    disabled
-                                                    style={{
-                                                        cursor: 'not-allowed',
-                                                        width: '18px',
-                                                        height: '18px'
-                                                    }}
-                                                />
-                                            </td>
-                                            <td style={{
-                                                padding: '6px',
-                                                textAlign: 'right',
-                                                color: '#333',
-                                                fontWeight: '500',
-                                                fontSize: '12px'
-                                            }}>
-                                                ₹{service.totalFees}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
                             </table>
+
+                            {/* Scrollable Body Table */}
+                            <div style={{
+                                overflowY: 'auto',
+                                maxHeight: '230px'
+                            }}>
+                                <table style={{
+                                    width: '100%',
+                                    borderCollapse: 'collapse',
+                                    tableLayout: 'fixed'
+                                }}>
+                                    <tbody>
+                                        {services.map((service, index) => (
+                                            <tr key={index} style={{
+                                                borderBottom: '1px solid #e0e0e0',
+                                                backgroundColor: service.selected
+                                                    ? '#eeeeee'
+                                                    : (index % 2 === 0 ? '#f8f9fa' : 'white')
+                                            }}>
+                                                <td style={{
+                                                    padding: '6px',
+                                                    color: '#333',
+                                                    fontSize: '12px',
+                                                    width: '5%',
+                                                    borderRight: '1px solid #e0e0e0'
+                                                }}>
+                                                    {service.sr}
+                                                </td>
+                                                <td style={{
+                                                    padding: '6px',
+                                                    color: '#333',
+                                                    fontSize: '12px',
+                                                    width: '15%',
+                                                    borderRight: '1px solid #e0e0e0'
+                                                }}>
+                                                    {service.group}
+                                                </td>
+                                                <td style={{
+                                                    padding: '6px',
+                                                    color: '#333',
+                                                    fontSize: '12px',
+                                                    width: '25%',
+                                                    borderRight: '1px solid #e0e0e0'
+                                                }}>
+                                                    {service.subGroup}
+                                                </td>
+                                                <td style={{
+                                                    padding: '6px',
+                                                    color: '#333',
+                                                    fontSize: '12px',
+                                                    width: '30%',
+                                                    borderRight: '1px solid #e0e0e0'
+                                                }}>
+                                                    {service.details}
+                                                </td>
+                                                <td style={{
+                                                    padding: '6px',
+                                                    textAlign: 'center',
+                                                    width: '10%',
+                                                    borderRight: '1px solid #e0e0e0'
+                                                }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={service.selected}
+                                                        onChange={() => handleSelectChange(index)}
+                                                        disabled
+                                                        style={{
+                                                            cursor: 'not-allowed',
+                                                            width: '18px',
+                                                            height: '18px'
+                                                        }}
+                                                    />
+                                                </td>
+                                                <td style={{
+                                                    padding: '6px',
+                                                    textAlign: 'right',
+                                                    color: '#333',
+                                                    fontWeight: '500',
+                                                    fontSize: '12px',
+                                                    width: '15%'
+                                                }}>
+                                                    ₹{service.totalFees}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         {/* Fields Section - 12 fields in 4 rows (3 fields per row) */}
