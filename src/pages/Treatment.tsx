@@ -601,11 +601,11 @@ export default function Treatment() {
     const [investigationsLoading, setInvestigationsLoading] = useState(false);
     const [investigationsError, setInvestigationsError] = useState<string | null>(null);
     const [investigationSearchError, setInvestigationSearchError] = useState<string | null>(null);
-    const investigationSearchErrorTimerRef = useRef<any>(null);
-    const complaintsErrorTimerRef = useRef<any>(null);
-    const diagnosesErrorTimerRef = useRef<any>(null);
-    const medicinesErrorTimerRef = useRef<any>(null);
-    const investigationsErrorTimerRef = useRef<any>(null);
+    const investigationSearchErrorTimerRef = React.useRef<any>(null);
+    const complaintsErrorTimerRef = React.useRef<any>(null);
+    const diagnosesErrorTimerRef = React.useRef<any>(null);
+    const medicinesErrorTimerRef = React.useRef<any>(null);
+    const investigationsErrorTimerRef = React.useRef<any>(null);
 
     const filteredInvestigations = React.useMemo(() => {
         const term = investigationSearch.trim().toLowerCase();
