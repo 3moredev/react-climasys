@@ -5487,7 +5487,12 @@ export default function Treatment() {
                             }}>
                                 Previous Visits ({previousVisits.length})
                             </div>
-                            <div style={{ padding: '0' }}>
+                            <div style={{
+                                padding: '0',
+                                maxHeight: '350px',
+                                overflowY: 'auto',
+                                borderTop: '1px solid #e0e0e0'
+                            }}>
                                 {loadingPreviousVisits ? (
                                     <div style={{
                                         padding: '20px',
@@ -5504,7 +5509,7 @@ export default function Treatment() {
                                             style={{
                                                 padding: '10px 15px',
                                                 borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: '#f5f5f5 ',
+                                                backgroundColor: index % 2 === 0 ? '#f5f5f5 ' : 'white',
                                                 cursor: 'pointer',
                                                 fontSize: '13px',
                                                 transition: 'background-color 0.2s ease'
