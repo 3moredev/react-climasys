@@ -5,6 +5,7 @@ export interface InvestigationOption {
   label: string;
   short_description?: string;
   description?: string;
+  parameterName?: string;
 }
 
 export interface InvestigationApiResponse {
@@ -65,6 +66,7 @@ export const investigationService = {
         label: item.Lab_Test_Description || item.test_name || item?.description || String(item.ID ?? ''),
         short_description: item.Lab_Test_Description || item.test_name,
         description: item.Lab_Test_Description || item.test_description || item?.description,
+        parameterName: item.parameter_name || item.Parameter_Name || item.parameterName || '',
       }));
 
       return options;

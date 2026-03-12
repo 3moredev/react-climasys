@@ -530,7 +530,7 @@ export default function ManageDiagnosis() {
           <label>Add New Diagnosis</label>
         </button>
 
-        <button className="btn-icon" onClick={handleRefresh} title="Refresh">
+        <button className="btn-icon" onClick={handleRefresh} title="Refresh / Reset">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
 

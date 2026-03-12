@@ -262,9 +262,10 @@ interface PrescriptionRow {
     instruction: string;
 }
 
-interface InvestigationRow {
-    id: string;
-    investigation: string;
+export interface InvestigationRow {
+    id: string;              // unique ID for row management
+    investigation: string;   // the lab test description
+    parameterName?: string;  // optional parameter name
 }
 
 interface DressingRow {
@@ -3387,7 +3388,8 @@ export default function Treatment() {
             investigationAdded = true; // Mark that investigation was successfully added
             const newRow: InvestigationRow = {
                 id: `custom_inv_${Date.now()}`,
-                investigation: normalizedName
+                investigation: normalizedName,
+                parameterName: testLabData.parameterName || ''
             };
             return [...prev, newRow];
         });
@@ -3777,9 +3779,7 @@ export default function Treatment() {
                             ? appointmentData.data.complaints
                             : (Array.isArray(appointmentData.data?.complaintsRows)
                                 ? appointmentData.data.complaintsRows
-                                : (Array.isArray(result.data?.complaints)
-                                    ? result.data.complaints
-                                    : null))));
+                                : null)));
 
                 if (complaintsSource && complaintsSource.length > 0) {
                     const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => {
@@ -4046,12 +4046,13 @@ export default function Treatment() {
                                 : null)));
 
                 if (investigationSource && investigationSource.length > 0) {
-                    const mappedInvestigationRows: InvestigationRow[] = investigationSource.map((row: any, index: number) => ({
-                        id: `inv-${index}-${Date.now()}`,
-                        investigation: row.investigation || row.lab_test_description || row.id || ''
+                    const rows: InvestigationRow[] = (appointmentData.investigationRows || appointmentData.investigations || []).map((row: any) => ({
+                        id: row.id || row.lab_test_description || row.investigation || '',
+                        investigation: row.investigation || row.lab_test_description || row.id || '',
+                        parameterName: row.parameter_name || row.parameterName || ''
                     }));
-                    setInvestigationRows(mappedInvestigationRows);
-                    console.log('Loaded investigation rows from API:', mappedInvestigationRows);
+                    setInvestigationRows(rows);
+                    console.log('Loaded investigation rows from API:', rows);
                 } else if (Array.isArray(investigationSource)) {
                     setInvestigationRows([]);
                 }
@@ -4809,8 +4810,9 @@ export default function Treatment() {
                 if (investigationSource && Array.isArray(investigationSource)) {
                     if (investigationSource.length > 0) {
                         const mappedInvestigationRows: InvestigationRow[] = investigationSource.map((row: any, index: number) => ({
-                            id: `inv-${index}-${Date.now()}`,
-                            investigation: row.investigation || row.lab_test_description || row.id || ''
+                            id: row.id || row.lab_test_description || row.investigation || `inv-${index}-${Date.now()}`,
+                            investigation: row.investigation || row.lab_test_description || row.id || '',
+                            parameterName: row.parameter_name || row.parameterName || ''
                         }));
                         setInvestigationRows(mappedInvestigationRows);
                         investigationRowsLoadedFromSaveResponseRef.current = true;
@@ -5326,7 +5328,11 @@ export default function Treatment() {
                 if (existingLabels.has(investigationLabel)) {
                     duplicateInvestigations.push(investigationOption?.label || val);
                 } else {
-                    newRows.push({ id: `inv_${Date.now()}_${val}`, investigation: investigationOption?.label || val });
+                    newRows.push({
+                        id: `inv_${Date.now()}_${val}`,
+                        investigation: investigationOption?.label || val,
+                        parameterName: (investigationOption as any)?.parameterName || ''
+                    });
                     existingLabels.add(investigationLabel);
                 }
             });
@@ -8554,6 +8560,7 @@ export default function Treatment() {
                                                 }}>
                                                     <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }}>Sr.</th>
                                                     <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Investigation</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Parameter Name</th>
                                                     <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
                                                 </tr>
                                             </thead>
@@ -8565,6 +8572,7 @@ export default function Treatment() {
                                                     }}>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.investigation}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.parameterName || '-'}</td>
                                                         <td style={{ textAlign: 'center' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                                 <div
