@@ -5201,6 +5201,8 @@ export default function Treatment() {
         const raw = prescriptionInput.trim();
         if (!raw) {
             setPrescriptionError('Please enter at least one prescription');
+            if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
+            prescriptionErrorTimerRef.current = setTimeout(() => setPrescriptionError(null), 3000);
             return;
         }
 
@@ -5226,6 +5228,8 @@ export default function Treatment() {
 
         if (!isValid) {
             setPrescriptionError('No Prescription found');
+            if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
+            prescriptionErrorTimerRef.current = setTimeout(() => setPrescriptionError(null), 3000);
             return;
         }
 
@@ -5233,10 +5237,13 @@ export default function Treatment() {
         const alreadyExists = prescriptionRows.some(r => r.prescription.toLowerCase().trim() === name.toLowerCase().trim());
         if (alreadyExists) {
             setPrescriptionError('Selected prescription is already added');
+            if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
+            prescriptionErrorTimerRef.current = setTimeout(() => setPrescriptionError(null), 3000);
             return;
         }
 
         setPrescriptionError(null);
+        if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
 
         const dose = (parts[2] || '').replace(/\s+/g, ''); // e.g., 1-1-1
         const days = (parts[3] || '').trim();
@@ -7775,12 +7782,22 @@ export default function Treatment() {
                                                     cursor: isFormDisabled ? 'not-allowed' : 'text'
                                                 },
                                                 '& .MuiFormHelperText-root': {
-                                                    color: prescriptionError === 'No Prescription found' ? 'gray !important' : 'inherit'
+                                                    display: 'none'
                                                 }
                                             }}
-                                            error={!!prescriptionError && prescriptionError !== 'No Prescription found'}
-                                            helperText={prescriptionError}
                                         />
+                                        {prescriptionError && (
+                                            <p style={{
+                                                color: '#666',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 400,
+                                                fontFamily: "'Roboto', sans-serif",
+                                                margin: '3px 0 0 0',
+                                                textAlign: 'left'
+                                            }}>
+                                                {prescriptionError}
+                                            </p>
+                                        )}
                                         {isRxOpen && rxSuggestions.length > 0 && (
                                             <div style={{
                                                 position: 'absolute',
