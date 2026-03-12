@@ -606,7 +606,7 @@ export default function PrescriptionCategory() {
           placeholder="Enter Category / Category Description"
           className="search-input-wrapper"
         />
-        <button className="btn-icon" onClick={handleRefresh} title="Refresh">
+        <button className="btn-icon" onClick={handleRefresh} title="Refresh / Reset">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
         {userId !== 7 && (

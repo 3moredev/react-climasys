@@ -591,7 +591,7 @@ export default function PrescriptionDetails() {
           <label>Add New Prescription</label>
         </button>
 
-        <button className="btn-icon" onClick={handleRefresh} title="Refresh">
+        <button className="btn-icon" onClick={handleRefresh} title="Refresh / Reset">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
 

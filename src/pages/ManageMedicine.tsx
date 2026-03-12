@@ -546,7 +546,7 @@ export default function ManageMedicine() {
           <label>Add New Medicine</label>
         </button>
 
-        <button className="btn-icon" onClick={handleRefresh} title="Refresh">
+        <button className="btn-icon" onClick={handleRefresh} title="Refresh / Reset">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
 
