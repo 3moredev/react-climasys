@@ -12,6 +12,7 @@ import { complaintService, ComplaintOption } from "../services/complaintService"
 import { medicineService, MedicineOption } from "../services/medicineService";
 import { diagnosisService, DiagnosisOption } from "../services/diagnosisService";
 import { investigationService, InvestigationOption } from "../services/investigationService";
+import { labParameterService, LabTestAndParameterRequest } from "../services/labParameterService";
 import { dressingService, DressingOption } from "../services/dressingService";
 import { appointmentService } from "../services/appointmentService";
 import { getFollowUpTypes, FollowUpTypeItem } from "../services/referenceService";
@@ -3332,7 +3333,7 @@ export default function Treatment() {
         setShowTestLabPopup(true);
     };
 
-    const handleSaveTestLab = (testLabData: TestLabData): boolean => {
+    const handleSaveTestLab = async (testLabData: TestLabData): Promise<boolean> => {
         const labTestName = testLabData.labTestName?.trim();
         if (!labTestName) {
             setInvestigationsError('Lab test name is required to add an investigation.');
@@ -3347,81 +3348,76 @@ export default function Treatment() {
             row => row.investigation?.toLowerCase().trim() === normalizedNameLower
         );
 
-        // Check if it already exists in investigationsOptions (dropdown list) - prevent adding if it exists in dropdown
+        // Check if it already exists in investigationsOptions (dropdown list)
         const existingInOptions = investigationsOptions.find(
             opt => opt.label?.toLowerCase().trim() === normalizedNameLower ||
                 opt.value?.toLowerCase().trim() === normalizedNameLower
         );
 
-        if (existingInTable || existingInOptions) {
-            const duplicateName = existingInTable?.investigation ||
-                existingInOptions?.label ||
-                normalizedName;
-            const msg = `Investigation "${duplicateName}" is already added.`;
-            setSnackbarMessage(msg);
-            setSnackbarOpen(true);
-            setInvestigationsSelectionError(msg);
-            // Do NOT close popup here; signal to popup to stay open
-            return false;
-        }
+        // If it exists but we are adding new parameters or just adding it to this visit, 
+        // we might still want to proceed if the parameters are different.
+        // However, the current logic is based on investigation name.
+        // For custom tests, we'll try to persist them anyway (the backend should handle merge).
 
-        setInvestigationsError(null);
+        try {
+            // 1. Persist to master database (Test + Parameters)
+            // This ensures parameters are available for future visits and join queries
+            const masterRequest: LabTestAndParameterRequest = {
+                doctorId: String(treatmentData?.doctorId || sessionData?.doctorId || '1'),
+                clinicId: String(sessionData?.clinicId || treatmentData?.clinicId || '1'),
+                newDescription: normalizedName,
+                priority: parseInt(testLabData.priority, 10) || 0,
+                parameters: testLabData.labTestRows.map(row => ({
+                    parameterName: row.parameterName
+                }))
+            };
 
-        // Check for duplicate investigation before adding (using functional update to get current state)
-        let investigationAdded = false;
-        setInvestigationRows(prev => {
-            // Check for duplicate by investigation name (case-insensitive)
-            const existingInvestigation = prev.find(
-                row => row.investigation?.toLowerCase().trim() === normalizedNameLower
-            );
+            console.log('Persisting custom lab test to master:', masterRequest);
+            await labParameterService.insertLabTestAndParameters(masterRequest);
 
-            if (existingInvestigation) {
-                // Show error in snackbar instead of investigation error section
-                setSnackbarMessage(`Investigation "${normalizedName}" is already added.`);
-                setSnackbarOpen(true);
-                setInvestigationsError(null); // Clear any existing error
-                // Keep popup open by not adding anything
-                investigationAdded = false;
-                return prev; // Return previous state without adding
+            // 2. Add to local table rows (one row per parameter for visibility)
+            const newRows: InvestigationRow[] = testLabData.labTestRows.map((row, idx) => ({
+                id: `custom_inv_${Date.now()}_${idx}`,
+                investigation: normalizedName,
+                parameterName: row.parameterName
+            }));
+
+            setInvestigationRows(prev => {
+                // Filter out existing parameters for this same investigation if already in table
+                const filteredPrev = prev.filter(r =>
+                    r.investigation?.toLowerCase().trim() !== normalizedNameLower
+                );
+                return [...filteredPrev, ...newRows];
+            });
+
+            // 3. Update dropdown options if it's a new test
+            if (!existingInOptions) {
+                setInvestigationsOptions(prev => {
+                    const exists = prev.some(opt =>
+                        opt.label?.toLowerCase() === normalizedNameLower ||
+                        opt.value?.toLowerCase() === normalizedNameLower
+                    );
+                    if (exists) return prev;
+
+                    const newOption: InvestigationOption = {
+                        value: normalizedName,
+                        label: normalizedName,
+                        short_description: normalizedName,
+                        description: normalizedName
+                    };
+                    return [...prev, newOption];
+                });
             }
 
-            investigationAdded = true; // Mark that investigation was successfully added
-            const newRow: InvestigationRow = {
-                id: `custom_inv_${Date.now()}`,
-                investigation: normalizedName,
-                parameterName: testLabData.parameterName || ''
-            };
-            return [...prev, newRow];
-        });
-
-        // Only add to options if investigation was actually added
-        if (investigationAdded) {
-            setInvestigationsOptions(prev => {
-                const exists = prev.some(opt =>
-                    opt.label?.toLowerCase() === normalizedNameLower ||
-                    opt.value?.toLowerCase() === normalizedNameLower
-                );
-                if (exists) {
-                    return prev;
-                }
-                const newOption: InvestigationOption = {
-                    value: normalizedName,
-                    label: normalizedName,
-                    short_description: normalizedName,
-                    description: normalizedName
-                };
-                return [...prev, newOption];
-            });
-        }
-
-        // Show success message only if investigation was actually added
-        if (investigationAdded) {
             setSnackbarMessage('Investigation added successfully!');
             setSnackbarOpen(true);
+            setInvestigationsError(null);
+            return true;
+        } catch (error: any) {
+            console.error('Failed to save custom lab test:', error);
+            setInvestigationsError(error.message || 'Failed to save lab test. Please try again.');
+            return false;
         }
-
-        // Let popup know whether this was a success (true) or duplicate/error (false)
-        return investigationAdded;
     };
 
     // Function to convert date to YYYY-MM-DD format
@@ -4570,7 +4566,8 @@ export default function Treatment() {
 
                 // Investigation rows - map to API format
                 investigationRows: investigationRows.map(row => ({
-                    investigation: row.investigation || ''
+                    investigation: row.investigation || '',
+                    parameterName: row.parameterName || ''
                 })),
 
                 // Instruction groups - map to API format
