@@ -3171,9 +3171,12 @@ export default function AppointmentTable() {
                                                                     height: "28px",
                                                                     padding: "2px 6px",
                                                                     backgroundColor: normalizeStatusLabel(a.status) !== 'WAITING' ? '#f5f5f5' : '#ffffff',
-                                                                    cursor: normalizeStatusLabel(a.status) !== 'WAITING' ? 'not-allowed' : 'text'
+                                                                    cursor: (isDoctor || normalizeStatusLabel(a.status) !== 'WAITING') ? 'not-allowed' : 'text'
                                                                 }}
+
+                                                                readOnly={isDoctor}
                                                             />
+
                                                         </td>
                                                         <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
                                                             <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
