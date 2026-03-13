@@ -463,7 +463,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                             display: 'flex',
                             flexDirection: 'column'
                         }}>
-                            {/* Fixed Header Table */}
+                            {/* 1. Static Header Table */}
                             <table style={{
                                 width: '100%',
                                 borderCollapse: 'collapse',
@@ -476,20 +476,21 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                         fontWeight: 'bold',
                                         fontSize: '11px'
                                     }}>
-                                        <th style={{ padding: '6px', textAlign: 'left', width: '5%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</th>
-                                        <th style={{ padding: '6px', textAlign: 'left', width: '15%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Group</th>
-                                        <th style={{ padding: '6px', textAlign: 'left', width: '25%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sub-groups</th>
-                                        <th style={{ padding: '6px', textAlign: 'left', width: '30%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Details</th>
-                                        <th style={{ padding: '6px', textAlign: 'center', width: '10%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Select</th>
-                                        <th style={{ padding: '6px', textAlign: 'right', width: '15%' }}>Total Fees</th>
+                                        <th style={{ padding: '10px 6px', textAlign: 'left', width: '8%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</th>
+                                        <th style={{ padding: '10px 6px', textAlign: 'left', width: '15%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Group</th>
+                                        <th style={{ padding: '10px 6px', textAlign: 'left', width: '22%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sub-groups</th>
+                                        <th style={{ padding: '10px 6px', textAlign: 'left', width: '30%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Details</th>
+                                        <th style={{ padding: '10px 6px', textAlign: 'center', width: '10%', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Select</th>
+                                        <th style={{ padding: '10px 6px', textAlign: 'right', width: '15%' }}>Total Fees</th>
                                     </tr>
                                 </thead>
                             </table>
 
-                            {/* Scrollable Body Table */}
+                            {/* 2. Scrollable Body Table */}
                             <div style={{
                                 overflowY: 'auto',
-                                maxHeight: '230px'
+                                maxHeight: '185px', // Accommodates approx 5 records
+                                backgroundColor: 'white'
                             }}>
                                 <table style={{
                                     width: '100%',
@@ -502,13 +503,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                                 borderBottom: '1px solid #e0e0e0',
                                                 backgroundColor: service.selected
                                                     ? '#eeeeee'
-                                                    : (index % 2 === 0 ? '#f8f9fa' : 'white')
+                                                    : (index % 2 === 0 ? '#f8f9fa' : 'white'),
+                                                height: '37px' // Fixed height to help with calculations
                                             }}>
                                                 <td style={{
                                                     padding: '6px',
                                                     color: '#333',
                                                     fontSize: '12px',
-                                                    width: '5%',
+                                                    width: '8%',
                                                     borderRight: '1px solid #e0e0e0'
                                                 }}>
                                                     {service.sr}
@@ -526,7 +528,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                                     padding: '6px',
                                                     color: '#333',
                                                     fontSize: '12px',
-                                                    width: '25%',
+                                                    width: '22%',
                                                     borderRight: '1px solid #e0e0e0'
                                                 }}>
                                                     {service.subGroup}
