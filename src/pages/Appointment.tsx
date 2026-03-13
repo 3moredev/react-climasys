@@ -1600,7 +1600,7 @@ export default function AppointmentTable() {
         }
     };
 
-    // Format last visit display according to requirements: date-provider-L format
+    // Format last visit display using only existing data from state
     const formatLastVisitDisplay = (patientId: string | number, reportsReceived: boolean, isNewPatient: boolean = false): string => {
         const key = String(patientId);
         const visits = previousVisits[key];
@@ -1610,55 +1610,24 @@ export default function AppointmentTable() {
             return "-";
         }
 
-        // If no previous visits data is loaded yet, show "Loading..." or fetch the data
+        // If no previous visits data is loaded yet, show "Loading..."
         if (!visits) {
-            // Trigger fetch for this patient if not already loading
-            if (!loadingVisits[key]) {
-                fetchPreviousVisits(patientId);
-            }
             return "Loading...";
         }
 
         // If visits array is empty, this means patient has no valid previous visits
-        // (all visits were cancelled/no-show or patient is truly new)
         if (visits.length === 0) {
             return "-";
         }
 
-        // With the updated API, visits are now filtered by status and sorted by date DESC
-        // The first visit in the array should be the most recent valid visit
-
-        // With the updated API, visits are now sorted by date DESC (newest first)
-        // So the first visit in the array is the latest completed visit (including today's if completed)
-        // This is exactly what we want to show as "Last Visit"
-
         const displayVisit = visits[0]; // First visit is the latest completed visit
-        const visitIndex = 0;
-
-        console.log(`🔍 Formatting last visit for patient ${key}:`, {
-            totalVisits: visits.length,
-            isNewPatient: isNewPatient,
-            allVisits: visits.map((v, i) => ({
-                index: i,
-                date: v.visit_date,
-                visitNo: v.patient_visit_no,
-                status: v.status_id
-            })),
-            selectedVisit: {
-                index: visitIndex,
-                date: displayVisit.visit_date,
-                visitNo: displayVisit.patient_visit_no,
-                status: displayVisit.status_id,
-                reason: visits.length === 1 ? "Only one visit" : "Latest completed visit"
-            }
-        });
 
         // Format date as DD-MMM-YY
         const visitDate = new Date(displayVisit.visit_date);
         const monthAbbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const formattedDate = `${String(visitDate.getDate()).padStart(2, '0')}-${monthAbbr[visitDate.getMonth()]}-${String(visitDate.getFullYear()).slice(-2)}`;
 
-        // Get provider name from doctor_id (prefer mapping to real doctor name)
+        // Get provider name from doctor_id
         let providerName = getDoctorLabelById(displayVisit.doctor_id);
         if (!providerName) {
             const rawId = String(displayVisit.doctor_id || '').trim();
@@ -1672,18 +1641,39 @@ export default function AppointmentTable() {
         // Build the display string: date - provider
         let displayText = `${formattedDate} - ${providerName}`;
 
-        // Decide whether to append "- L" based on PLR from last-visit API
-        const cached = lastVisitSuffix[key];
-        if (cached === undefined) {
-            if (!loadingLastVisitSuffix[key]) {
-                fetchLastVisitSuffix(patientId);
-            }
-        } else if (cached) {
+        // Append "- L" if suffix is known/cached
+        if (lastVisitSuffix[key]) {
             displayText += ' - L';
         }
 
         return displayText;
     };
+
+    // New effect to fetch missing visit data for all appointments
+    useEffect(() => {
+        if (!appointments || appointments.length === 0) return;
+
+        const fetchMissingData = async () => {
+            // Process appointments safely in the background
+            for (const appt of appointments) {
+                const pid = String(appt.patientId);
+
+                // 1. Fetch previous visits if not already present or loading
+                if (!previousVisits[pid] && !loadingVisits[pid]) {
+                    console.log(`📡 [Effect] Triggering fetchPreviousVisits for patient ${pid}`);
+                    await fetchPreviousVisits(pid);
+                }
+
+                // 2. Fetch last visit suffix if not already present or loading
+                if (lastVisitSuffix[pid] === undefined && !loadingLastVisitSuffix[pid]) {
+                    console.log(`📡 [Effect] Triggering fetchLastVisitSuffix for patient ${pid}`);
+                    await fetchLastVisitSuffix(pid);
+                }
+            }
+        };
+
+        fetchMissingData();
+    }, [appointments]); // Triggered whenever appointments list changes or is initially loaded
 
     // Get selected doctor name for display
     const getSelectedDoctorName = () => {
@@ -2387,22 +2377,23 @@ export default function AppointmentTable() {
     };
 
     // Doctor Screen Component - Same UI but different functionality
-    const DoctorScreen = () => {
-        // Show loader until all essential API calls complete for doctor view
-        // Note: selectedDoctorId is no longer required since we show all doctors' appointments
-        const isDoctorLoading = (
-            loadingSessionData ||
-            loadingDoctors ||
-            loadingStatuses ||
-            loadingAppointments ||
-            !sessionData ||
-            allDoctors.length === 0
-        );
+    const DoctorScreen = useMemo(() => {
+        return () => {
+            // Show loader until all essential API calls complete for doctor view
+            // Note: selectedDoctorId is no longer required since we show all doctors' appointments
+            const isDoctorLoading = (
+                loadingSessionData ||
+                loadingDoctors ||
+                loadingStatuses ||
+                loadingAppointments ||
+                !sessionData ||
+                allDoctors.length === 0
+            );
 
-        return (
-            <div className="container-fluid mt-3" style={{ fontFamily: "'Roboto', sans-serif" }}>
+            return (
+                <div className="container-fluid mt-3" style={{ fontFamily: "'Roboto', sans-serif" }}>
 
-                <style>{`
+                    <style>{`
         /* Fixed table layout to respect column widths */
         .table.appointments-table { table-layout: fixed !important; width: 100%;}
         /* Keep cells on a single line so content determines width */
@@ -2773,116 +2764,116 @@ export default function AppointmentTable() {
         }
       `}</style>
 
-                {/* Refresh notification */}
-                {showRefreshNotification && (
-                    <div className="alert alert-success alert-dismissible fade show" role="alert" style={{ marginBottom: '1rem' }}>
-                        <i className="fas fa-check-circle me-2"></i>
-                        <strong>Appointments refreshed!</strong> Treatment submitted successfully.
-                        <button type="button" className="btn-close" onClick={() => setShowRefreshNotification(false)}></button>
+                    {/* Refresh notification */}
+                    {showRefreshNotification && (
+                        <div className="alert alert-success alert-dismissible fade show" role="alert" style={{ marginBottom: '1rem' }}>
+                            <i className="fas fa-check-circle me-2"></i>
+                            <strong>Appointments refreshed!</strong> Treatment submitted successfully.
+                            <button type="button" className="btn-close" onClick={() => setShowRefreshNotification(false)}></button>
+                        </div>
+                    )}
+
+                    {/* Header with Doctor-specific title */}
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h2>Appointments</h2>
+                        <div className="d-flex align-items-center" style={{ fontSize: '0.85rem', color: '#455A64', gap: '8px', whiteSpace: 'nowrap' }}>
+                            <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" title="WAITING" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
+                            |
+                            <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" title="WITH DOCTOR" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
+                            |
+                            <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" title="CONSULT ON CALL" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
+                            |
+                            <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" title="COMPLETE" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
+                            |
+                            <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" title="SAVE" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
+                            |
+                            <span className="ms-1"><span className="rounded-circle d-inline-block" title="PRESCRIPTION/COLLECTION" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['PRESCRIPTION/COLLECTION'] || 0} </span>
+                        </div>
                     </div>
-                )}
 
-                {/* Header with Doctor-specific title */}
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h2>Appointments</h2>
-                    <div className="d-flex align-items-center" style={{ fontSize: '0.85rem', color: '#455A64', gap: '8px', whiteSpace: 'nowrap' }}>
-                        <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" title="WAITING" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
-                        |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" title="WITH DOCTOR" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
-                        |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" title="CONSULT ON CALL" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
-                        |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" title="COMPLETE" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
-                        |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" title="SAVE" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
-                        |
-                        <span className="ms-1"><span className="rounded-circle d-inline-block" title="PRESCRIPTION/COLLECTION" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['PRESCRIPTION/COLLECTION'] || 0} </span>
-                    </div>
-                </div>
-
-                {/* Doctor-specific controls - No booking, only viewing and status updates */}
-                <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', paddingBottom: '18px' }}>
-                    {/* Search for patients - Read only for doctors */}
-                    <div className="position-relative" ref={searchRef}>
-                        <SearchInput
-                            value={searchTerm}
-                            onChange={(val) => handleSearchChange(val)}
-                            onClear={() => {
-                                handleSearchChange('');
-                                searchInputRef.current?.focus();
-                            }}
-                            placeholder="Search by Patient ID/Name/ContactNumber"
-                            ref={searchInputRef}
-                            autoFocus={isDoctor}
-                            error={!!searchError}
-                            helperText={searchError}
-                            onBlur={() => {
-                                // Keep search ready for continuous typing in doctor screen
-                                if (isDoctor) {
-                                    setTimeout(() => searchInputRef.current?.focus(), 0);
-                                }
-                            }}
-                            inputStyle={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
-                        />
-
-                        {/* Search Dropdown for Doctor Screen */}
-                        {showDropdown && searchMenuPosition && (
-                            <div
-                                className="bg-white border border-secondary rounded shadow-lg"
-                                style={{
-                                    position: "fixed",
-                                    top: searchMenuPosition.top,
-                                    left: searchMenuPosition.left,
-                                    width: searchMenuPosition.width,
-                                    zIndex: 1051,
-                                    maxHeight: "70vh",
-                                    overflowY: "auto",
-                                    fontFamily: "'Roboto', sans-serif"
+                    {/* Doctor-specific controls - No booking, only viewing and status updates */}
+                    <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', paddingBottom: '18px' }}>
+                        {/* Search for patients - Read only for doctors */}
+                        <div className="position-relative" ref={searchRef}>
+                            <SearchInput
+                                value={searchTerm}
+                                onChange={(val) => handleSearchChange(val)}
+                                onClear={() => {
+                                    handleSearchChange('');
+                                    searchInputRef.current?.focus();
                                 }}
-                                onMouseDown={(e) => {
-                                    // Keep input focused when clicking items in the dropdown
-                                    e.preventDefault();
+                                placeholder="Search by Patient ID/Name/ContactNumber"
+                                ref={searchInputRef}
+                                autoFocus={isDoctor}
+                                error={!!searchError}
+                                helperText={searchError}
+                                onBlur={() => {
+                                    // Keep search ready for continuous typing in doctor screen
+                                    if (isDoctor) {
+                                        setTimeout(() => searchInputRef.current?.focus(), 0);
+                                    }
                                 }}
-                            >
-                                {loading ? (
-                                    <div className="p-3 text-center">
-                                        <div className="spinner-border spinner-border-sm text-primary" role="status">
-                                            <span className="visually-hidden">Loading...</span>
+                                inputStyle={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
+                            />
+
+                            {/* Search Dropdown for Doctor Screen */}
+                            {showDropdown && searchMenuPosition && (
+                                <div
+                                    className="bg-white border border-secondary rounded shadow-lg"
+                                    style={{
+                                        position: "fixed",
+                                        top: searchMenuPosition.top,
+                                        left: searchMenuPosition.left,
+                                        width: searchMenuPosition.width,
+                                        zIndex: 1051,
+                                        maxHeight: "70vh",
+                                        overflowY: "auto",
+                                        fontFamily: "'Roboto', sans-serif"
+                                    }}
+                                    onMouseDown={(e) => {
+                                        // Keep input focused when clicking items in the dropdown
+                                        e.preventDefault();
+                                    }}
+                                >
+                                    {loading ? (
+                                        <div className="p-3 text-center">
+                                            <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                                <span className="visually-hidden">Loading...</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : searchResults.length > 0 ? (
-                                    searchResults.map((patient) => {
-                                        const age = patient.age_given;
-                                        // Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
+                                    ) : searchResults.length > 0 ? (
+                                        searchResults.map((patient) => {
+                                            const age = patient.age_given;
+                                            // Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
 
-                                        return (
-                                            <div
-                                                key={patient.id}
-                                                className="p-3 border-bottom cursor-pointer"
-                                                style={{
-                                                    cursor: "pointer",
-                                                    backgroundColor: selectedPatients.some(p => p.id === patient.id) ? "#eeeeee" : "white"
-                                                }}
-                                                onClick={() => handlePatientSelect(patient)}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#eeeeee"}
-                                                onMouseLeave={(e) => {
-                                                    const isSelected = selectedPatients.some(p => p.id === patient.id);
-                                                    e.currentTarget.style.backgroundColor = isSelected ? "#eeeeee" : "white";
-                                                }}
-                                            >
-                                                <div className="fw-bold d-flex align-items-center">
-                                                    <i className="fas fa-user me-2 text-primary"></i>
-                                                    {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}
-                                                </div>
-                                                <div className="text-muted small mt-1 text-nowrap">
-                                                    <i className="fas fa-id-card me-1"></i>
-                                                    <strong>ID:</strong> {patient.id} |
-                                                    <i className="fas fa-birthday-cake me-1 ms-2"></i>
-                                                    <strong>Age:</strong> {age} |
-                                                    <i className="fas fa-phone me-1"></i>
-                                                    <strong>Contact:</strong> {patient.mobile_1 || 'N/A'}
-                                                </div>
-                                                {/* <div className="text-muted small mt-1"> | 
+                                            return (
+                                                <div
+                                                    key={patient.id}
+                                                    className="p-3 border-bottom cursor-pointer"
+                                                    style={{
+                                                        cursor: "pointer",
+                                                        backgroundColor: selectedPatients.some(p => p.id === patient.id) ? "#eeeeee" : "white"
+                                                    }}
+                                                    onClick={() => handlePatientSelect(patient)}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#eeeeee"}
+                                                    onMouseLeave={(e) => {
+                                                        const isSelected = selectedPatients.some(p => p.id === patient.id);
+                                                        e.currentTarget.style.backgroundColor = isSelected ? "#eeeeee" : "white";
+                                                    }}
+                                                >
+                                                    <div className="fw-bold d-flex align-items-center">
+                                                        <i className="fas fa-user me-2 text-primary"></i>
+                                                        {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}
+                                                    </div>
+                                                    <div className="text-muted small mt-1 text-nowrap">
+                                                        <i className="fas fa-id-card me-1"></i>
+                                                        <strong>ID:</strong> {patient.id} |
+                                                        <i className="fas fa-birthday-cake me-1 ms-2"></i>
+                                                        <strong>Age:</strong> {age} |
+                                                        <i className="fas fa-phone me-1"></i>
+                                                        <strong>Contact:</strong> {patient.mobile_1 || 'N/A'}
+                                                    </div>
+                                                    {/* <div className="text-muted small mt-1"> | 
                                                         <i className="fas fa-info-circle me-1 ms-2"></i>
                                                         <strong>Status:</strong> {patient.registration_status}
                                                     </div>
@@ -2890,696 +2881,328 @@ export default function AppointmentTable() {
                                                         <i className="fas fa-calendar me-1"></i>
                                                         <strong>Registered:</strong> {new Date(patient.date_of_registration).toLocaleDateString()}
                                                     </div> */}
-                                            </div>
-                                        );
-                                    })
-                                ) : searchError ? (
-                                    <div className="p-3 text-danger text-center">
-                                        <i className="fas fa-exclamation-triangle me-2"></i>
-                                        {searchError}
-                                    </div>
-                                ) : (
-                                    <div className="p-3 text-muted text-center">No patients found</div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-
-
-                    {/* Status filter */}
-                    <FormControl sx={{ minWidth: 200, height: 38 }}>
-                        <Select
-                            value={filterStatus}
-                            onChange={(e) => {
-                                setFilterStatus(e.target.value as string);
-                                setSearchTerm("");
-                                setSearchResults([]);
-                                setShowDropdown(false);
-                            }}
-                            displayEmpty
-                            size="small"
-                            sx={{
-                                height: 38,
-                                backgroundColor: '#FFFFFF',
-                                color: filterStatus ? '#212121' : '#6c757d',
-                                '& .MuiSelect-select': {
-                                    padding: '6px 12px',
-                                    fontSize: '1rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    fontWeight: 500,
-                                    textAlign: 'left',
-                                }
-                            }}
-                            MenuProps={{
-                                anchorOrigin: {
-                                    vertical: 'bottom',
-                                    horizontal: 'left',
-                                },
-                                transformOrigin: {
-                                    vertical: 'top',
-                                    horizontal: 'left',
-                                },
-                                PaperProps: {
-                                    sx: {
-                                        marginTop: '4px',
-                                    }
-                                }
-                            }}
-                        >
-                            <MenuItem value="">ALL</MenuItem>
-                            {(() => {
-                                const filteredStatuses = (availableStatuses.length ? availableStatuses : [
-                                    'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE', 'PRESCRIPTION/COLLECTION'
-                                ]).filter(status => {
-                                    const statusId = mapStatusLabelToId(status);
-                                    return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5 || statusId === 9; // show key workflow statuses including SAVE (9)
-                                });
-                                return filteredStatuses.map(s => (
-                                    <MenuItem key={s} value={s}>{s}</MenuItem>
-                                ));
-                            })()}
-                        </Select>
-                    </FormControl>
-
-                    {/* List/Card toggle */}
-                    <div
-                        className="d-flex align-items-center ms-auto"
-                        style={{
-                            height: "38px",
-                            backgroundColor: "#f8f9fa",
-                            // border: "1px solid #dee2e6",
-                            fontFamily: "'Roboto', sans-serif",
-                            borderRadius: "6px",
-                            overflow: "hidden",
-                            gap: "8px"
-                        }}
-                    >
-                        <button
-                            className="btn d-flex align-items-center justify-content-center"
-                            style={{
-                                height: "100%",
-                                backgroundColor: activeView === 'list' ? "#007bff" : "rgba(0, 0, 0, 0.35)",
-                                border: "none",
-                                color: "#ffffff",
-                                fontFamily: "'Roboto', sans-serif",
-                                cursor: "pointer",
-                                padding: "0 12px",
-                                minWidth: "40px",
-                                transition: "all 0.2s ease"
-                            }}
-                            onClick={handleListClick}
-                            title="List View"
-                        >
-                            <List style={{ color: '#ffffff' }} />
-                        </button>
-                        {/* <div style={{ width: '1px', height: '100%', backgroundColor: '#dee2e6' }} /> */}
-                        <button
-                            className="btn d-flex align-items-center justify-content-center"
-                            style={{
-                                height: "100%",
-                                backgroundColor: activeView === 'card' ? "#007bff" : "rgba(0, 0, 0, 0.35)",
-                                border: "none",
-                                color: "#ffffff",
-                                fontFamily: "'Roboto', sans-serif",
-                                cursor: "pointer",
-                                padding: "0 12px",
-                                minWidth: "40px",
-                                transition: "all 0.2s ease"
-                            }}
-                            onClick={handleCardClick}
-                            title="Card View"
-                        >
-                            <CreditCard style={{ color: '#ffffff' }} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Content Area - Same as receptionist but without booking functionality */}
-                {filteredAppointments.length === 0 ? (
-                    isDoctorLoading ? (
-                        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
-                            <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
-                                <span className="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center py-5">
-                            <div className="mb-3">
-                                <i className="fas fa-calendar-check" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
-                            </div>
-                            <h5 className="text-muted">No Patients Currently With You</h5>
-                            <p className="text-muted">No patients are waiting or have "WITH DOCTOR" or "CONSULT ON CALL" status at the moment.</p>
-                        </div>
-                    )
-                ) : (
-                    <>
-                        {/* List View - Same as receptionist */}
-                        {activeView === 'list' && (
-                            <div className="table-responsive position-relative">
-                                {/* Loading overlay for appointments refresh (Doctor screen) */}
-                                {isDoctorLoading && (
-                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-                                        style={{
-                                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                            zIndex: 10,
-                                            minHeight: '200px'
-                                        }}>
-                                        <div className="spinner-border text-primary" role="status">
-                                            <span className="visually-hidden">Refreshing...</span>
+                                                </div>
+                                            );
+                                        })
+                                    ) : searchError ? (
+                                        <div className="p-3 text-danger text-center">
+                                            <i className="fas fa-exclamation-triangle me-2"></i>
+                                            {searchError}
                                         </div>
-                                    </div>
-                                )}
-                                <table className="table table-borderless align-middle appointments-table">
-                                    <thead>
-                                        <tr>
-                                            <th className="sr-col">Sr.</th>
-                                            <th className="name-col">Patient Name</th>
-                                            <th className="gender-col text-start">Gender</th>
-                                            <th className="age-col text-start">Age</th>
-                                            <th className="contact-col text-start">Contact</th>
-                                            <th className="time-col text-start">Time</th>
+                                    ) : (
+                                        <div className="p-3 text-muted text-center">No patients found</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
-                                            <th className="provider-col text-start">Provider</th>
-                                            <th className="online-col text-start">Online</th>
-                                            <th className="status-col text-start">Status</th>
-                                            <th className="last-col text-start">Last Visit</th>
-                                            <th className="action-col text-start">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {currentAppointments.map((a, i) => {
-                                            const originalIndex = startIndex + i;
-                                            return (
-                                                <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
-                                                    <td className="sr-col">{a.sr}</td>
-                                                    <td className="name-col">
-                                                        <Tooltip title={a.patient || ""} arrow placement="bottom">
-                                                            <a
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    setSelectedPatientForQuickReg(a);
-                                                                    setShowQuickRegistration(true);
-                                                                }}
-                                                                style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
-                                                            >
-                                                                {a.patient}
-                                                            </a>
-                                                        </Tooltip>
-                                                    </td>
-                                                    <td className="gender-col">{a.gender}</td>
-                                                    <td className="age-col">{getAgeString(a.dob)}</td>
-                                                    <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
-                                                    <td className="time-col">{extractTime(a.time)}</td>
 
-                                                    <td className="provider-col">
-                                                        <Select
-                                                            value={getDoctorLabelById(a.doctorId) || getDoctorLabelById(a.provider) || a.provider || getDoctorLabelById(selectedDoctorId) || ''}
-                                                            onChange={(e) => handleProviderChange(originalIndex, e.target.value as string)}
-                                                            displayEmpty
-                                                            disabled={(isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2}
-                                                            readOnly={isDoctor && mapStatusLabelToId(a.status) < 2}
-                                                            renderValue={(selected) => {
-                                                                if (!selected) {
-                                                                    return <em style={{ color: '#999' }}>Select Provider</em>;
-                                                                }
-                                                                return selected;
-                                                            }}
-                                                            variant="outlined"
-                                                            size="small"
-                                                            sx={{
-                                                                height: '30px', // Slightly taller for better alignment
-                                                                width: '100%',  // Fill the cell
-                                                                fontSize: '0.85rem',
-                                                                backgroundColor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? '#f5f5f5' : '#fff',
-                                                                cursor: isDoctor ? 'not-allowed' : (((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer'),
-                                                                borderRadius: '4px',
-                                                                '&.Mui-disabled': {
-                                                                    pointerEvents: 'auto',
-                                                                    cursor: 'not-allowed',
-                                                                    '& .MuiSelect-select': {
-                                                                        cursor: 'not-allowed !important',
-                                                                        pointerEvents: 'auto !important'
-                                                                    }
-                                                                },
-                                                                '& .MuiSelect-select': {
-                                                                    padding: '4px 24px 4px 8px', // Better vertical centering
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    cursor: isDoctor ? 'not-allowed' : 'inherit'
-                                                                },
-                                                                '& .MuiSvgIcon-root': {
-                                                                    cursor: isDoctor ? 'not-allowed' : 'inherit'
-                                                                },
-                                                                '& .MuiOutlinedInput-notchedOutline': {
-                                                                    borderColor: '#ced4da'
-                                                                },
-                                                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                                    borderColor: '#ced4da'
-                                                                },
-                                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                                    borderColor: '#86b7fe',
-                                                                    borderWidth: '1px'
-                                                                }
-                                                            }}
-                                                            MenuProps={{
-                                                                PaperProps: {
-                                                                    sx: {
-                                                                        marginTop: '4px',
-                                                                        zIndex: 3000,
-                                                                        '& .MuiMenuItem-root.Mui-selected': {
-                                                                            backgroundColor: '#eeeeee !important',
-                                                                        },
-                                                                        '& .MuiMenuItem-root:hover': {
-                                                                            backgroundColor: '#eeeeee',
-                                                                        },
-                                                                        '& .MuiMenuItem-root.Mui-selected:hover': {
-                                                                            backgroundColor: '#eeeeee',
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }}
-                                                        >
-                                                            {getProviderOptionsWithSelectedFirst().map(opt => (
-                                                                <MenuItem key={opt.id} value={opt.label} sx={{ fontSize: '0.85rem' }}>{opt.label}</MenuItem>
-                                                            ))}
-                                                        </Select>
-                                                    </td>
-                                                    <td className="online-cell">
-                                                        <input
-                                                            type="text"
-                                                            className="form-control form-control-sm"
-                                                            value={a.online}
-                                                            onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
-                                                            placeholder="HH:mm"
-                                                            disabled={normalizeStatusLabel(a.status) !== 'WAITING'}
-                                                            title={normalizeStatusLabel(a.status) !== 'WAITING' ? "Only editable when status is WAITING" : ""}
-                                                            style={{
-                                                                fontFamily: "'Roboto', sans-serif",
-                                                                fontWeight: 500,
-                                                                height: "28px",
-                                                                padding: "2px 6px",
-                                                                backgroundColor: normalizeStatusLabel(a.status) !== 'WAITING' ? '#f5f5f5' : '#ffffff',
-                                                                cursor: normalizeStatusLabel(a.status) !== 'WAITING' ? 'not-allowed' : 'text'
-                                                            }}
-                                                        />
-                                                    </td>
-                                                    <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
-                                                        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                                                            <span className={`d-inline-block rounded-circle ${((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '' : ((a as any).statusColorPending || a.statusColor)}`} style={{ width: "14px", height: "14px", backgroundColor: ((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
-                                                            <span style={{ fontSize: '0.9rem', color: '#263238' }}>{(a as any).statusPending || a.status}</span>
-                                                            <div
-                                                                aria-label="Change Status"
-                                                                title="Status changes are disabled on this screen"
-                                                                style={{
-                                                                    display: "inline-flex",
-                                                                    alignItems: "center",
-                                                                    justifyContent: "center",
-                                                                    width: "28px",
-                                                                    height: "28px",
-                                                                    cursor: "not-allowed",
-                                                                    color: "#B0BEC5",
-                                                                    backgroundColor: "transparent",
-                                                                    borderRadius: "4px",
-                                                                    opacity: 0.6
-                                                                }}
-                                                            >
-                                                                <MoreVert fontSize="small" />
-                                                            </div>
-                                                        </div>
 
-                                                    </td>
-                                                    <td className="last-col">
-                                                        {(() => {
-                                                            if (loadingVisits[a.patientId]) {
-                                                                return (
-                                                                    <span className="text-muted">
-                                                                        <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                        Loading...
-                                                                    </span>
-                                                                );
-                                                            }
-                                                            const lastVisitText = formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1);
-                                                            if (lastVisitText === "-") {
-                                                                return <span>{lastVisitText}</span>;
-                                                            }
-                                                            return (
+                        {/* Status filter */}
+                        <FormControl sx={{ minWidth: 200, height: 38 }}>
+                            <Select
+                                value={filterStatus}
+                                onChange={(e) => {
+                                    setFilterStatus(e.target.value as string);
+                                    setSearchTerm("");
+                                    setSearchResults([]);
+                                    setShowDropdown(false);
+                                }}
+                                displayEmpty
+                                size="small"
+                                sx={{
+                                    height: 38,
+                                    backgroundColor: '#FFFFFF',
+                                    color: filterStatus ? '#212121' : '#6c757d',
+                                    '& .MuiSelect-select': {
+                                        padding: '6px 12px',
+                                        fontSize: '1rem',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        fontWeight: 500,
+                                        textAlign: 'left',
+                                    }
+                                }}
+                                MenuProps={{
+                                    anchorOrigin: {
+                                        vertical: 'bottom',
+                                        horizontal: 'left',
+                                    },
+                                    transformOrigin: {
+                                        vertical: 'top',
+                                        horizontal: 'left',
+                                    },
+                                    PaperProps: {
+                                        sx: {
+                                            marginTop: '4px',
+                                        }
+                                    }
+                                }}
+                            >
+                                <MenuItem value="">ALL</MenuItem>
+                                {(() => {
+                                    const filteredStatuses = (availableStatuses.length ? availableStatuses : [
+                                        'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE', 'PRESCRIPTION/COLLECTION'
+                                    ]).filter(status => {
+                                        const statusId = mapStatusLabelToId(status);
+                                        return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5 || statusId === 9; // show key workflow statuses including SAVE (9)
+                                    });
+                                    return filteredStatuses.map(s => (
+                                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                                    ));
+                                })()}
+                            </Select>
+                        </FormControl>
+
+                        {/* List/Card toggle */}
+                        <div
+                            className="d-flex align-items-center ms-auto"
+                            style={{
+                                height: "38px",
+                                backgroundColor: "#f8f9fa",
+                                // border: "1px solid #dee2e6",
+                                fontFamily: "'Roboto', sans-serif",
+                                borderRadius: "6px",
+                                overflow: "hidden",
+                                gap: "8px"
+                            }}
+                        >
+                            <button
+                                className="btn d-flex align-items-center justify-content-center"
+                                style={{
+                                    height: "100%",
+                                    backgroundColor: activeView === 'list' ? "#007bff" : "rgba(0, 0, 0, 0.35)",
+                                    border: "none",
+                                    color: "#ffffff",
+                                    fontFamily: "'Roboto', sans-serif",
+                                    cursor: "pointer",
+                                    padding: "0 12px",
+                                    minWidth: "40px",
+                                    transition: "all 0.2s ease"
+                                }}
+                                onClick={handleListClick}
+                                title="List View"
+                            >
+                                <List style={{ color: '#ffffff' }} />
+                            </button>
+                            {/* <div style={{ width: '1px', height: '100%', backgroundColor: '#dee2e6' }} /> */}
+                            <button
+                                className="btn d-flex align-items-center justify-content-center"
+                                style={{
+                                    height: "100%",
+                                    backgroundColor: activeView === 'card' ? "#007bff" : "rgba(0, 0, 0, 0.35)",
+                                    border: "none",
+                                    color: "#ffffff",
+                                    fontFamily: "'Roboto', sans-serif",
+                                    cursor: "pointer",
+                                    padding: "0 12px",
+                                    minWidth: "40px",
+                                    transition: "all 0.2s ease"
+                                }}
+                                onClick={handleCardClick}
+                                title="Card View"
+                            >
+                                <CreditCard style={{ color: '#ffffff' }} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Content Area - Same as receptionist but without booking functionality */}
+                    {filteredAppointments.length === 0 ? (
+                        isDoctorLoading ? (
+                            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
+                                <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+                                    <span className="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-5">
+                                <div className="mb-3">
+                                    <i className="fas fa-calendar-check" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+                                </div>
+                                <h5 className="text-muted">No Patients Currently With You</h5>
+                                <p className="text-muted">No patients are waiting or have "WITH DOCTOR" or "CONSULT ON CALL" status at the moment.</p>
+                            </div>
+                        )
+                    ) : (
+                        <>
+                            {/* List View - Same as receptionist */}
+                            {activeView === 'list' && (
+                                <div className="table-responsive position-relative">
+                                    {/* Loading overlay for appointments refresh (Doctor screen) */}
+                                    {isDoctorLoading && (
+                                        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+                                            style={{
+                                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                                zIndex: 10,
+                                                minHeight: '200px'
+                                            }}>
+                                            <div className="spinner-border text-primary" role="status">
+                                                <span className="visually-hidden">Refreshing...</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <table className="table table-borderless align-middle appointments-table">
+                                        <thead>
+                                            <tr>
+                                                <th className="sr-col">Sr.</th>
+                                                <th className="name-col">Patient Name</th>
+                                                <th className="gender-col text-start">Gender</th>
+                                                <th className="age-col text-start">Age</th>
+                                                <th className="contact-col text-start">Contact</th>
+                                                <th className="time-col text-start">Time</th>
+
+                                                <th className="provider-col text-start">Provider</th>
+                                                <th className="online-col text-start">Online</th>
+                                                <th className="status-col text-start">Status</th>
+                                                <th className="last-col text-start">Last Visit</th>
+                                                <th className="action-col text-start">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {currentAppointments.map((a, i) => {
+                                                const originalIndex = startIndex + i;
+                                                return (
+                                                    <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
+                                                        <td className="sr-col">{a.sr}</td>
+                                                        <td className="name-col">
+                                                            <Tooltip title={a.patient || ""} arrow placement="bottom">
                                                                 <a
-                                                                    href="#"
-                                                                    title={`View visit history`}
-                                                                    style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
-                                                                        handleLastVisitClick(a.patientId, a.patient, a);
+                                                                        setSelectedPatientForQuickReg(a);
+                                                                        setShowQuickRegistration(true);
+                                                                    }}
+                                                                    style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                                >
+                                                                    {a.patient}
+                                                                </a>
+                                                            </Tooltip>
+                                                        </td>
+                                                        <td className="gender-col">{a.gender}</td>
+                                                        <td className="age-col">{getAgeString(a.dob)}</td>
+                                                        <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
+                                                        <td className="time-col">{extractTime(a.time)}</td>
+
+                                                        <td className="provider-col">
+                                                            <Select
+                                                                value={getDoctorLabelById(a.doctorId) || getDoctorLabelById(a.provider) || a.provider || getDoctorLabelById(selectedDoctorId) || ''}
+                                                                onChange={(e) => handleProviderChange(originalIndex, e.target.value as string)}
+                                                                displayEmpty
+                                                                disabled={(isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2}
+                                                                readOnly={isDoctor && mapStatusLabelToId(a.status) < 2}
+                                                                renderValue={(selected) => {
+                                                                    if (!selected) {
+                                                                        return <em style={{ color: '#999' }}>Select Provider</em>;
+                                                                    }
+                                                                    return selected;
+                                                                }}
+                                                                variant="outlined"
+                                                                size="small"
+                                                                sx={{
+                                                                    height: '30px', // Slightly taller for better alignment
+                                                                    width: '100%',  // Fill the cell
+                                                                    fontSize: '0.85rem',
+                                                                    backgroundColor: ((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? '#f5f5f5' : '#fff',
+                                                                    cursor: isDoctor ? 'not-allowed' : (((isReceptionist || isDoctor) && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer'),
+                                                                    borderRadius: '4px',
+                                                                    '&.Mui-disabled': {
+                                                                        pointerEvents: 'auto',
+                                                                        cursor: 'not-allowed',
+                                                                        '& .MuiSelect-select': {
+                                                                            cursor: 'not-allowed !important',
+                                                                            pointerEvents: 'auto !important'
+                                                                        }
+                                                                    },
+                                                                    '& .MuiSelect-select': {
+                                                                        padding: '4px 24px 4px 8px', // Better vertical centering
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        cursor: isDoctor ? 'not-allowed' : 'inherit'
+                                                                    },
+                                                                    '& .MuiSvgIcon-root': {
+                                                                        cursor: isDoctor ? 'not-allowed' : 'inherit'
+                                                                    },
+                                                                    '& .MuiOutlinedInput-notchedOutline': {
+                                                                        borderColor: '#ced4da'
+                                                                    },
+                                                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                        borderColor: '#ced4da'
+                                                                    },
+                                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                        borderColor: '#86b7fe',
+                                                                        borderWidth: '1px'
+                                                                    }
+                                                                }}
+                                                                MenuProps={{
+                                                                    PaperProps: {
+                                                                        sx: {
+                                                                            marginTop: '4px',
+                                                                            zIndex: 3000,
+                                                                            '& .MuiMenuItem-root.Mui-selected': {
+                                                                                backgroundColor: '#eeeeee !important',
+                                                                            },
+                                                                            '& .MuiMenuItem-root:hover': {
+                                                                                backgroundColor: '#eeeeee',
+                                                                            },
+                                                                            '& .MuiMenuItem-root.Mui-selected:hover': {
+                                                                                backgroundColor: '#eeeeee',
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {getProviderOptionsWithSelectedFirst().map(opt => (
+                                                                    <MenuItem key={opt.id} value={opt.label} sx={{ fontSize: '0.85rem' }}>{opt.label}</MenuItem>
+                                                                ))}
+                                                            </Select>
+                                                        </td>
+                                                        <td className="online-cell">
+                                                            <input
+                                                                type="text"
+                                                                className="form-control form-control-sm"
+                                                                value={a.online}
+                                                                onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
+                                                                placeholder="HH:mm"
+                                                                disabled={normalizeStatusLabel(a.status) !== 'WAITING'}
+                                                                title={normalizeStatusLabel(a.status) !== 'WAITING' ? "Only editable when status is WAITING" : ""}
+                                                                style={{
+                                                                    fontFamily: "'Roboto', sans-serif",
+                                                                    fontWeight: 500,
+                                                                    height: "28px",
+                                                                    padding: "2px 6px",
+                                                                    backgroundColor: normalizeStatusLabel(a.status) !== 'WAITING' ? '#f5f5f5' : '#ffffff',
+                                                                    cursor: normalizeStatusLabel(a.status) !== 'WAITING' ? 'not-allowed' : 'text'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
+                                                            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                                                                <span className={`d-inline-block rounded-circle ${((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '' : ((a as any).statusColorPending || a.statusColor)}`} style={{ width: "14px", height: "14px", backgroundColor: ((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
+                                                                <span style={{ fontSize: '0.9rem', color: '#263238' }}>{(a as any).statusPending || a.status}</span>
+                                                                <div
+                                                                    aria-label="Change Status"
+                                                                    title="Status changes are disabled on this screen"
+                                                                    style={{
+                                                                        display: "inline-flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "center",
+                                                                        width: "28px",
+                                                                        height: "28px",
+                                                                        cursor: "not-allowed",
+                                                                        color: "#B0BEC5",
+                                                                        backgroundColor: "transparent",
+                                                                        borderRadius: "4px",
+                                                                        opacity: 0.6
                                                                     }}
                                                                 >
-                                                                    {lastVisitText}
-                                                                </a>
-                                                            );
-                                                        })()}
-                                                    </td>
-                                                    <td className="action-col" style={{ whiteSpace: "nowrap" }}>
-                                                        <div style={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '8px',
-                                                            justifyContent: 'flex-start'
-                                                        }}>
-                                                            {/* Lab Details Button - Disabled for Doctor */}
-                                                            <div
-                                                                title="Lab Details"
-                                                                style={{
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    width: '28px',
-                                                                    height: '28px',
-                                                                    cursor: 'not-allowed',
-                                                                    color: '#9e9e9e',
-                                                                    backgroundColor: '#f5f5f5',
-                                                                    borderRadius: '4px',
-                                                                    border: '1px solid #ddd',
-                                                                    opacity: 0.5
-                                                                }}
-                                                            >
-                                                                <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
+                                                                    <MoreVert fontSize="small" />
+                                                                </div>
                                                             </div>
 
-                                                            {/* Save Button for Doctor */}
-                                                            <div
-                                                                title="Save"
-                                                                onClick={async () => {
-                                                                    if (isDoctor) return;
-                                                                    setSearchTerm("");
-                                                                    setSearchResults([]);
-                                                                    setShowDropdown(false);
-                                                                    try {
-                                                                        const pid = a.patientId;
-                                                                        const vno = Number(a.visitNumber) || getLatestVisitNumber(a.patientId);
-                                                                        const shift = a.shiftId || 1;
-                                                                        const clinic = a.clinicId || sessionData?.clinicId || '';
-                                                                        const onlineTime = (a.online || '').trim() || undefined;
-                                                                        const updatedProvider = a.provider || getDoctorLabelById(selectedDoctorId) || '';
-                                                                        const doctor = getDoctorIdFromProviderName(updatedProvider) || selectedDoctorId || a.doctorId || '';
-                                                                        const currentStatus = (a as any).statusPending || a.status;
-                                                                        const statusId = mapStatusLabelToId(currentStatus);
-
-                                                                        if (!pid || !clinic || !doctor) {
-                                                                            setSnackbarMessage('Missing identifiers to update appointment');
-                                                                            setShowSnackbar(true);
-                                                                            setTimeout(() => setShowSnackbar(false), 3000);
-                                                                            return;
-                                                                        }
-
-                                                                        const response = await appointmentService.updateTodaysAppointment({
-                                                                            patientId: String(pid),
-                                                                            patientVisitNo: Number(vno),
-                                                                            shiftId: Number(shift),
-                                                                            clinicId: String(clinic),
-                                                                            onlineAppointmentTime: onlineTime,
-                                                                            doctorId: String(doctor),
-                                                                            statusId: Number(statusId),
-                                                                            userId: String(sessionData?.userId || 'system')
-                                                                        });
-
-                                                                        if (response.success) {
-                                                                            setSnackbarMessage('Appointment updated successfully');
-                                                                            setShowSnackbar(true);
-                                                                            setTimeout(() => setShowSnackbar(false), 3000);
-                                                                            // Commit pending status to saved fields
-                                                                            if ((appointments[originalIndex] as any).statusPending) {
-                                                                                const committed = (appointments[originalIndex] as any).statusPending;
-                                                                                updateAppointmentField(originalIndex, 'status', committed);
-                                                                                updateAppointmentField(originalIndex, 'statusColor', getStatusColor(committed));
-                                                                                updateAppointmentField(originalIndex, 'statusPending' as any, undefined);
-                                                                                updateAppointmentField(originalIndex, 'statusColorPending' as any, undefined);
-                                                                            }
-                                                                            // Refresh current provider's appointments to reflect server truth
-                                                                            try {
-                                                                                await refreshAppointmentsForSelectedDoctor();
-                                                                            } catch (e) {
-                                                                                console.warn('Refresh after save failed:', e);
-                                                                            }
-                                                                        } else {
-                                                                            setSnackbarMessage('Update failed: ' + (response.message || 'Unknown error'));
-                                                                            setShowSnackbar(true);
-                                                                            setTimeout(() => setShowSnackbar(false), 4000);
-                                                                        }
-                                                                    } catch (err) {
-                                                                        console.error('Update appointment failed:', err);
-                                                                        setSnackbarMessage('Failed to update appointment: ' + (err as any).message);
-                                                                        setShowSnackbar(true);
-                                                                        setTimeout(() => setShowSnackbar(false), 4000);
-                                                                    }
-                                                                }}
-                                                                style={{
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    width: '28px',
-                                                                    height: '28px',
-                                                                    cursor: isDoctor ? 'not-allowed' : 'pointer',
-                                                                    color: isDoctor ? '#9e9e9e' : '#607D8B',
-                                                                    backgroundColor: isDoctor ? '#f5f5f5' : 'transparent',
-                                                                    borderRadius: '4px',
-                                                                    border: '1px solid #ddd',
-                                                                    opacity: isDoctor ? 0.5 : 1
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    if (!isDoctor) e.currentTarget.style.borderColor = 'black';
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    if (!isDoctor) e.currentTarget.style.borderColor = '#ddd';
-                                                                }}
-                                                            >
-                                                                <Save fontSize="small" />
-                                                            </div>
-
-                                                            {/* Delete Button - Disabled for Doctor */}
-                                                            <div
-                                                                title="Delete"
-                                                                style={{
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    width: '28px',
-                                                                    height: '28px',
-                                                                    cursor: 'not-allowed',
-                                                                    color: '#9e9e9e',
-                                                                    backgroundColor: '#f5f5f5',
-                                                                    borderRadius: '4px',
-                                                                    border: '1px solid #ddd',
-                                                                    opacity: 0.5
-                                                                }}
-                                                            >
-                                                                <Delete fontSize="small" />
-                                                            </div>
-
-                                                            {/* Checkout Button - Disabled for Doctor */}
-                                                            <div
-                                                                title="Visit Details"
-                                                                style={{
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    width: '28px',
-                                                                    height: '28px',
-                                                                    cursor: 'not-allowed',
-                                                                    color: '#9e9e9e',
-                                                                    backgroundColor: '#f5f5f5',
-                                                                    borderRadius: '4px',
-                                                                    border: '1px solid #ddd',
-                                                                    opacity: 0.5
-                                                                }}
-                                                            >
-                                                                <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16 }} />
-                                                            </div>
-
-                                                            {/* Treatment Button - Enabled for WITH DOCTOR, CONSULT ON CALL, SAVE, COLLECTION, PRESCRIPTION/COLLECTION, or COMPLETE */}
-                                                            <div
-                                                                title={(() => {
-                                                                    const statusId = mapStatusLabelToId(a.status);
-                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                    return isEnabled ? "Treatment" : "Treatment";
-                                                                })()}
-                                                                onClick={() => {
-                                                                    const statusId = mapStatusLabelToId(a.status);
-                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                    if (isEnabled) {
-                                                                        // Navigate to treatment or open modal                                                                        
-                                                                        navigate('/treatment', {
-                                                                            state: {
-                                                                                patientId: a.patientId,
-                                                                                patientName: a.patient,
-                                                                                visitNumber: a.visitNumber,
-                                                                                doctorId: a.doctorId,
-                                                                                clinicId: clinicId,
-                                                                                shiftId: Number(a.shiftId || 1),
-                                                                                visitDate: String(a.visitDate || ''),
-                                                                                appointmentId: a.appointmentId,
-                                                                                age: a.age,
-                                                                                gender: a.gender,
-                                                                                contact: a.contact,
-                                                                                status: a.status,
-                                                                                statusId: mapStatusLabelToId(a.status),
-                                                                                referralName: a.referralName, referralCode: a.referBy
-                                                                            }
-                                                                        });
-                                                                    }
-                                                                }}
-                                                                style={{
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    width: '28px',
-                                                                    height: '28px',
-                                                                    cursor: (() => {
-                                                                        const statusId = mapStatusLabelToId(a.status);
-                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                        return isEnabled ? 'pointer' : 'not-allowed';
-                                                                    })(),
-                                                                    color: (() => {
-                                                                        const statusId = mapStatusLabelToId(a.status);
-                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                        return isEnabled ? '#607D8B' : '#BDBDBD';
-                                                                    })(),
-                                                                    backgroundColor: 'transparent',
-                                                                    borderRadius: '4px',
-                                                                    border: (() => {
-                                                                        const statusId = mapStatusLabelToId(a.status);
-                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                        return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
-                                                                    })(),
-                                                                    opacity: (() => {
-                                                                        const statusId = mapStatusLabelToId(a.status);
-                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                        return isEnabled ? 1 : 0.5;
-                                                                    })()
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    const statusId = mapStatusLabelToId(a.status);
-                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                    if (isEnabled) {
-                                                                        e.currentTarget.style.backgroundColor = '#FFF3E0';
-                                                                        e.currentTarget.style.borderColor = '#FF9800';
-                                                                    }
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    const statusId = mapStatusLabelToId(a.status);
-                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                    if (isEnabled) {
-                                                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                                                        e.currentTarget.style.borderColor = '#ddd';
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <img
-                                                                    src="/images/avatar/Treatment.svg"
-                                                                    alt="Treatment"
-                                                                    style={{
-                                                                        width: 16,
-                                                                        height: 16,
-                                                                        filter: (() => {
-                                                                            const statusId = mapStatusLabelToId(a.status);
-                                                                            const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                            return isEnabled ? 'none' : 'grayscale(100%)';
-                                                                        })()
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        {/* Card View - Same as receptionist */}
-                        {activeView === 'card' && (
-                            <div className="card-grid position-relative">
-                                {/* Loading overlay for appointments refresh (Doctor screen) */}
-                                {isDoctorLoading && (
-                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-                                        style={{
-                                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                            zIndex: 10,
-                                            minHeight: '200px'
-                                        }}>
-                                        <div className="spinner-border text-primary" role="status">
-                                            <span className="visually-hidden">Refreshing...</span>
-                                        </div>
-                                    </div>
-                                )}
-                                {currentAppointments.map((appointment, index) => {
-                                    const originalIndex = startIndex + index;
-                                    return (
-                                        <div key={index}>
-                                            <div className="appointment-card">
-                                                <div className="card-header">
-                                                    <div className="d-flex align-items-center" style={{ gap: '8px' }}>
-                                                        <span
-                                                            title={appointment.status || ""}
-                                                            className={`d-inline-block rounded-circle ${((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '' : ((appointment as any).statusColorPending || appointment.statusColor)}`}
-                                                            style={{ width: '10px', height: '10px', backgroundColor: ((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}
-                                                        ></span>
-                                                        <a
-                                                            href="#"
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                setSelectedPatientForQuickReg(appointment);
-                                                                setShowQuickRegistration(true);
-                                                            }}
-                                                            className="patient-name"
-                                                            style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
-                                                        >
-                                                            {appointment.patient}
-                                                        </a>
-                                                    </div>
-                                                    <div
-                                                        onClick={(e) => {
-                                                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                            setMenuPosition({ top: rect.bottom + 6, left: rect.left - 120 });
-                                                            setOpenStatusIndex(openStatusIndex === originalIndex ? null : originalIndex);
-                                                        }}
-                                                        title="Change Status"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '28px',
-                                                            height: '28px',
-                                                            cursor: 'not-allowed',
-                                                            color: '#B0BEC5',
-                                                            backgroundColor: 'transparent',
-                                                            borderRadius: '4px'
-                                                        }}
-                                                    >
-                                                        <MoreVert fontSize="small" />
-                                                    </div>
-                                                </div>
-                                                {/* Status menu disabled on this screen */}
-                                                <div className="card-details">
-                                                    <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
-                                                    <div className="kv"><span className="k">Age:</span><span className="v">{getAgeString(appointment.dob)}</span></div>
-                                                    <div className="kv"><span className="k">Provider:</span><span className="v">{formatProviderLabel(appointment.provider)}</span></div>
-                                                    <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
-                                                    <div className="kv">
-                                                        <span className="k">Last Visit:</span>
-                                                        <span className="v">
+                                                        </td>
+                                                        <td className="last-col">
                                                             {(() => {
-                                                                if (loadingVisits[appointment.patientId]) {
+                                                                if (loadingVisits[a.patientId]) {
                                                                     return (
                                                                         <span className="text-muted">
                                                                             <i className="fas fa-spinner fa-spin me-1"></i>
@@ -3587,11 +3210,7 @@ export default function AppointmentTable() {
                                                                         </span>
                                                                     );
                                                                 }
-                                                                const lastVisitText = formatLastVisitDisplay(
-                                                                    appointment.patientId,
-                                                                    appointment.reports_received,
-                                                                    appointment.visitNumber === 1
-                                                                );
+                                                                const lastVisitText = formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1);
                                                                 if (lastVisitText === "-") {
                                                                     return <span>{lastVisitText}</span>;
                                                                 }
@@ -3599,391 +3218,774 @@ export default function AppointmentTable() {
                                                                     <a
                                                                         href="#"
                                                                         title={`View visit history`}
-                                                                        style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                                        style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
                                                                         onClick={(e) => {
                                                                             e.preventDefault();
-                                                                            handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
+                                                                            handleLastVisitClick(a.patientId, a.patient, a);
                                                                         }}
                                                                     >
                                                                         {lastVisitText}
                                                                     </a>
                                                                 );
                                                             })()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
-                                                </div>
-                                                <div className="d-flex align-items-center" style={{ gap: '8px' }}>
-                                                    <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, max-content)', alignItems: 'center', gap: '8px' }}>
-                                                        <div
-                                                            className="crm-btn"
-                                                            title="Lab Details"
-                                                            style={{
-                                                                opacity: 0.7,
-                                                                cursor: 'not-allowed',
-                                                                backgroundColor: '#f5f5f5',
-                                                                color: '#000000'
-                                                            }}
-                                                        >
-                                                            <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
-                                                        </div>
-                                                        <div
-                                                            className="crm-btn"
-                                                            title="Save"
-                                                            style={{
-                                                                opacity: 0.5,
-                                                                cursor: 'not-allowed',
-                                                                backgroundColor: '#f5f5f5',
-                                                                color: '#9e9e9e'
-                                                            }}
-                                                        >
-                                                            <Save fontSize="small" sx={{ color: '#000000' }} />
-                                                        </div>
-                                                        <div
-                                                            className="crm-btn"
-                                                            title="Delete"
-                                                            style={{
-                                                                opacity: 0.5,
-                                                                cursor: 'not-allowed',
-                                                                backgroundColor: '#f5f5f5',
-                                                                color: '#9e9e9e'
-                                                            }}
-                                                        >
-                                                            <Delete fontSize="small" sx={{ color: '#000000' }} />
-                                                        </div>
-                                                        <div
-                                                            className="crm-btn"
-                                                            title="Visit Details"
-                                                            style={{
-                                                                cursor: 'not-allowed',
-                                                                backgroundColor: '#f5f5f5',
-                                                                color: '#9e9e9e',
-                                                                border: '1px solid #CFD8DC',
-                                                                opacity: 0.5
-                                                            }}
-                                                        >
-                                                            <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
-                                                        </div>
-                                                    </div>
-                                                    <div className="kv">
-                                                        <span className="k">Online:</span>
-                                                        <span className="v">
-                                                            <input
-                                                                type="text"
-                                                                className="form-control form-control-sm"
-                                                                placeholder="HH:mm"
-                                                                value={appointment.online}
-                                                                onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
-                                                                disabled={normalizeStatusLabel(appointment.status) !== 'WAITING'}
-                                                                title={normalizeStatusLabel(appointment.status) !== 'WAITING' ? "Only editable when status is WAITING" : ""}
-                                                                style={{
-                                                                    width: '80px',
-                                                                    height: '28px',
-                                                                    padding: '2px 6px',
-                                                                    display: 'inline-block',
-                                                                    cursor: normalizeStatusLabel(appointment.status) !== 'WAITING' ? 'not-allowed' : 'text',
-                                                                    backgroundColor: normalizeStatusLabel(appointment.status) !== 'WAITING' ? '#f5f5f5' : '#ffffff'
+                                                        </td>
+                                                        <td className="action-col" style={{ whiteSpace: "nowrap" }}>
+                                                            <div style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '8px',
+                                                                justifyContent: 'flex-start'
+                                                            }}>
+                                                                {/* Lab Details Button - Disabled for Doctor */}
+                                                                <div
+                                                                    title="Lab Details"
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '28px',
+                                                                        height: '28px',
+                                                                        cursor: 'not-allowed',
+                                                                        color: '#9e9e9e',
+                                                                        backgroundColor: '#f5f5f5',
+                                                                        borderRadius: '4px',
+                                                                        border: '1px solid #ddd',
+                                                                        opacity: 0.5
+                                                                    }}
+                                                                >
+                                                                    <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
+                                                                </div>
+
+                                                                {/* Save Button for Doctor */}
+                                                                <div
+                                                                    title="Save"
+                                                                    onClick={async () => {
+                                                                        if (isDoctor) return;
+                                                                        setSearchTerm("");
+                                                                        setSearchResults([]);
+                                                                        setShowDropdown(false);
+                                                                        try {
+                                                                            const pid = a.patientId;
+                                                                            const vno = Number(a.visitNumber) || getLatestVisitNumber(a.patientId);
+                                                                            const shift = a.shiftId || 1;
+                                                                            const clinic = a.clinicId || sessionData?.clinicId || '';
+                                                                            const onlineTime = (a.online || '').trim() || undefined;
+                                                                            const updatedProvider = a.provider || getDoctorLabelById(selectedDoctorId) || '';
+                                                                            const doctor = getDoctorIdFromProviderName(updatedProvider) || selectedDoctorId || a.doctorId || '';
+                                                                            const currentStatus = (a as any).statusPending || a.status;
+                                                                            const statusId = mapStatusLabelToId(currentStatus);
+
+                                                                            if (!pid || !clinic || !doctor) {
+                                                                                setSnackbarMessage('Missing identifiers to update appointment');
+                                                                                setShowSnackbar(true);
+                                                                                setTimeout(() => setShowSnackbar(false), 3000);
+                                                                                return;
+                                                                            }
+
+                                                                            const response = await appointmentService.updateTodaysAppointment({
+                                                                                patientId: String(pid),
+                                                                                patientVisitNo: Number(vno),
+                                                                                shiftId: Number(shift),
+                                                                                clinicId: String(clinic),
+                                                                                onlineAppointmentTime: onlineTime,
+                                                                                doctorId: String(doctor),
+                                                                                statusId: Number(statusId),
+                                                                                userId: String(sessionData?.userId || 'system')
+                                                                            });
+
+                                                                            if (response.success) {
+                                                                                setSnackbarMessage('Appointment updated successfully');
+                                                                                setShowSnackbar(true);
+                                                                                setTimeout(() => setShowSnackbar(false), 3000);
+                                                                                // Commit pending status to saved fields
+                                                                                if ((appointments[originalIndex] as any).statusPending) {
+                                                                                    const committed = (appointments[originalIndex] as any).statusPending;
+                                                                                    updateAppointmentField(originalIndex, 'status', committed);
+                                                                                    updateAppointmentField(originalIndex, 'statusColor', getStatusColor(committed));
+                                                                                    updateAppointmentField(originalIndex, 'statusPending' as any, undefined);
+                                                                                    updateAppointmentField(originalIndex, 'statusColorPending' as any, undefined);
+                                                                                }
+                                                                                // Refresh current provider's appointments to reflect server truth
+                                                                                try {
+                                                                                    await refreshAppointmentsForSelectedDoctor();
+                                                                                } catch (e) {
+                                                                                    console.warn('Refresh after save failed:', e);
+                                                                                }
+                                                                            } else {
+                                                                                setSnackbarMessage('Update failed: ' + (response.message || 'Unknown error'));
+                                                                                setShowSnackbar(true);
+                                                                                setTimeout(() => setShowSnackbar(false), 4000);
+                                                                            }
+                                                                        } catch (err) {
+                                                                            console.error('Update appointment failed:', err);
+                                                                            setSnackbarMessage('Failed to update appointment: ' + (err as any).message);
+                                                                            setShowSnackbar(true);
+                                                                            setTimeout(() => setShowSnackbar(false), 4000);
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '28px',
+                                                                        height: '28px',
+                                                                        cursor: isDoctor ? 'not-allowed' : 'pointer',
+                                                                        color: isDoctor ? '#9e9e9e' : '#607D8B',
+                                                                        backgroundColor: isDoctor ? '#f5f5f5' : 'transparent',
+                                                                        borderRadius: '4px',
+                                                                        border: '1px solid #ddd',
+                                                                        opacity: isDoctor ? 0.5 : 1
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (!isDoctor) e.currentTarget.style.borderColor = 'black';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        if (!isDoctor) e.currentTarget.style.borderColor = '#ddd';
+                                                                    }}
+                                                                >
+                                                                    <Save fontSize="small" />
+                                                                </div>
+
+                                                                {/* Delete Button - Disabled for Doctor */}
+                                                                <div
+                                                                    title="Delete"
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '28px',
+                                                                        height: '28px',
+                                                                        cursor: 'not-allowed',
+                                                                        color: '#9e9e9e',
+                                                                        backgroundColor: '#f5f5f5',
+                                                                        borderRadius: '4px',
+                                                                        border: '1px solid #ddd',
+                                                                        opacity: 0.5
+                                                                    }}
+                                                                >
+                                                                    <Delete fontSize="small" />
+                                                                </div>
+
+                                                                {/* Checkout Button - Disabled for Doctor */}
+                                                                <div
+                                                                    title="Visit Details"
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '28px',
+                                                                        height: '28px',
+                                                                        cursor: 'not-allowed',
+                                                                        color: '#9e9e9e',
+                                                                        backgroundColor: '#f5f5f5',
+                                                                        borderRadius: '4px',
+                                                                        border: '1px solid #ddd',
+                                                                        opacity: 0.5
+                                                                    }}
+                                                                >
+                                                                    <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16 }} />
+                                                                </div>
+
+                                                                {/* Treatment Button - Enabled for WITH DOCTOR, CONSULT ON CALL, SAVE, COLLECTION, PRESCRIPTION/COLLECTION, or COMPLETE */}
+                                                                <div
+                                                                    title={(() => {
+                                                                        const statusId = mapStatusLabelToId(a.status);
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                        return isEnabled ? "Treatment" : "Treatment";
+                                                                    })()}
+                                                                    onClick={() => {
+                                                                        const statusId = mapStatusLabelToId(a.status);
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                        if (isEnabled) {
+                                                                            // Navigate to treatment or open modal                                                                        
+                                                                            navigate('/treatment', {
+                                                                                state: {
+                                                                                    patientId: a.patientId,
+                                                                                    patientName: a.patient,
+                                                                                    visitNumber: a.visitNumber,
+                                                                                    doctorId: a.doctorId,
+                                                                                    clinicId: clinicId,
+                                                                                    shiftId: Number(a.shiftId || 1),
+                                                                                    visitDate: String(a.visitDate || ''),
+                                                                                    appointmentId: a.appointmentId,
+                                                                                    age: a.age,
+                                                                                    gender: a.gender,
+                                                                                    contact: a.contact,
+                                                                                    status: a.status,
+                                                                                    statusId: mapStatusLabelToId(a.status),
+                                                                                    referralName: a.referralName, referralCode: a.referBy
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '28px',
+                                                                        height: '28px',
+                                                                        cursor: (() => {
+                                                                            const statusId = mapStatusLabelToId(a.status);
+                                                                            const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                            return isEnabled ? 'pointer' : 'not-allowed';
+                                                                        })(),
+                                                                        color: (() => {
+                                                                            const statusId = mapStatusLabelToId(a.status);
+                                                                            const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                            return isEnabled ? '#607D8B' : '#BDBDBD';
+                                                                        })(),
+                                                                        backgroundColor: 'transparent',
+                                                                        borderRadius: '4px',
+                                                                        border: (() => {
+                                                                            const statusId = mapStatusLabelToId(a.status);
+                                                                            const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                            return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
+                                                                        })(),
+                                                                        opacity: (() => {
+                                                                            const statusId = mapStatusLabelToId(a.status);
+                                                                            const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                            return isEnabled ? 1 : 0.5;
+                                                                        })()
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        const statusId = mapStatusLabelToId(a.status);
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                        if (isEnabled) {
+                                                                            e.currentTarget.style.backgroundColor = '#FFF3E0';
+                                                                            e.currentTarget.style.borderColor = '#FF9800';
+                                                                        }
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        const statusId = mapStatusLabelToId(a.status);
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                        if (isEnabled) {
+                                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                                            e.currentTarget.style.borderColor = '#ddd';
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <img
+                                                                        src="/images/avatar/Treatment.svg"
+                                                                        alt="Treatment"
+                                                                        style={{
+                                                                            width: 16,
+                                                                            height: 16,
+                                                                            filter: (() => {
+                                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                                const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                                return isEnabled ? 'none' : 'grayscale(100%)';
+                                                                            })()
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            {/* Card View - Same as receptionist */}
+                            {activeView === 'card' && (
+                                <div className="card-grid position-relative">
+                                    {/* Loading overlay for appointments refresh (Doctor screen) */}
+                                    {isDoctorLoading && (
+                                        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+                                            style={{
+                                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                                zIndex: 10,
+                                                minHeight: '200px'
+                                            }}>
+                                            <div className="spinner-border text-primary" role="status">
+                                                <span className="visually-hidden">Refreshing...</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {currentAppointments.map((appointment, index) => {
+                                        const originalIndex = startIndex + index;
+                                        return (
+                                            <div key={index}>
+                                                <div className="appointment-card">
+                                                    <div className="card-header">
+                                                        <div className="d-flex align-items-center" style={{ gap: '8px' }}>
+                                                            <span
+                                                                title={appointment.status || ""}
+                                                                className={`d-inline-block rounded-circle ${((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '' : ((appointment as any).statusColorPending || appointment.statusColor)}`}
+                                                                style={{ width: '10px', height: '10px', backgroundColor: ((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}
+                                                            ></span>
+                                                            <a
+                                                                href="#"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    setSelectedPatientForQuickReg(appointment);
+                                                                    setShowQuickRegistration(true);
                                                                 }}
-                                                            />
-                                                        </span>
-                                                    </div>
-                                                    <div
-                                                        className="crm-btn ms-auto"
-                                                        title={(() => {
-                                                            const statusId = mapStatusLabelToId(appointment.status);
-                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                            return isEnabled ? "Treatment" : "Treatment";
-                                                        })()}
-                                                        onClick={() => {
-                                                            const statusId = mapStatusLabelToId(appointment.status);
-                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                            if (isEnabled) {
-                                                                // Treatment button functionality - can be implemented as needed
-                                                                console.log('Treatment clicked for patient:', appointment.patientId);
-                                                                navigate('/treatment', {
-                                                                    state: {
-                                                                        patientId: appointment.patientId,
-                                                                        patientName: appointment.patient,
-                                                                        visitNumber: appointment.visitNumber,
-                                                                        doctorId: appointment.doctorId,
-                                                                        clinicId: clinicId,
-                                                                        shiftId: Number(appointment.shiftId || 1),
-                                                                        visitDate: String(appointment.visitDate || ''),
-                                                                        appointmentId: appointment.appointmentId,
-                                                                        age: appointment.age,
-                                                                        gender: appointment.gender,
-                                                                        contact: appointment.contact,
-                                                                        status: appointment.status,
-                                                                        statusId: mapStatusLabelToId(appointment.status),
-                                                                        referralName: appointment.referralName, referralCode: appointment.referBy
-                                                                    }
-                                                                });
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            cursor: (() => {
-                                                                const statusId = mapStatusLabelToId(appointment.status);
-                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                return isEnabled ? 'pointer' : 'not-allowed';
-                                                            })(),
-                                                            backgroundColor: (() => {
-                                                                const statusId = mapStatusLabelToId(appointment.status);
-                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                return isEnabled ? '#ECEFF1' : '#F5F5F5';
-                                                            })(),
-                                                            color: (() => {
-                                                                const statusId = mapStatusLabelToId(appointment.status);
-                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                return isEnabled ? '#607D8B' : '#BDBDBD';
-                                                            })(),
-                                                            border: (() => {
-                                                                const statusId = mapStatusLabelToId(appointment.status);
-                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
-                                                            })(),
-                                                            opacity: (() => {
-                                                                const statusId = mapStatusLabelToId(appointment.status);
-                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                return isEnabled ? 1 : 0.5;
-                                                            })()
-                                                        }}
-                                                    >
-                                                        <img
-                                                            src="/images/avatar/Treatment.svg"
-                                                            alt="Treatment"
+                                                                className="patient-name"
+                                                                style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                            >
+                                                                {appointment.patient}
+                                                            </a>
+                                                        </div>
+                                                        <div
+                                                            onClick={(e) => {
+                                                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                                setMenuPosition({ top: rect.bottom + 6, left: rect.left - 120 });
+                                                                setOpenStatusIndex(openStatusIndex === originalIndex ? null : originalIndex);
+                                                            }}
+                                                            title="Change Status"
                                                             style={{
-                                                                width: 16,
-                                                                height: 16,
-                                                                filter: (() => {
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                cursor: 'not-allowed',
+                                                                color: '#B0BEC5',
+                                                                backgroundColor: 'transparent',
+                                                                borderRadius: '4px'
+                                                            }}
+                                                        >
+                                                            <MoreVert fontSize="small" />
+                                                        </div>
+                                                    </div>
+                                                    {/* Status menu disabled on this screen */}
+                                                    <div className="card-details">
+                                                        <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
+                                                        <div className="kv"><span className="k">Age:</span><span className="v">{getAgeString(appointment.dob)}</span></div>
+                                                        <div className="kv"><span className="k">Provider:</span><span className="v">{formatProviderLabel(appointment.provider)}</span></div>
+                                                        <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
+                                                        <div className="kv">
+                                                            <span className="k">Last Visit:</span>
+                                                            <span className="v">
+                                                                {(() => {
+                                                                    if (loadingVisits[appointment.patientId]) {
+                                                                        return (
+                                                                            <span className="text-muted">
+                                                                                <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                                Loading...
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                    const lastVisitText = formatLastVisitDisplay(
+                                                                        appointment.patientId,
+                                                                        appointment.reports_received,
+                                                                        appointment.visitNumber === 1
+                                                                    );
+                                                                    if (lastVisitText === "-") {
+                                                                        return <span>{lastVisitText}</span>;
+                                                                    }
+                                                                    return (
+                                                                        <a
+                                                                            href="#"
+                                                                            title={`View visit history`}
+                                                                            style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                                            onClick={(e) => {
+                                                                                e.preventDefault();
+                                                                                handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
+                                                                            }}
+                                                                        >
+                                                                            {lastVisitText}
+                                                                        </a>
+                                                                    );
+                                                                })()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
+                                                    </div>
+                                                    <div className="d-flex align-items-center" style={{ gap: '8px' }}>
+                                                        <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, max-content)', alignItems: 'center', gap: '8px' }}>
+                                                            <div
+                                                                className="crm-btn"
+                                                                title="Lab Details"
+                                                                style={{
+                                                                    opacity: 0.7,
+                                                                    cursor: 'not-allowed',
+                                                                    backgroundColor: '#f5f5f5',
+                                                                    color: '#000000'
+                                                                }}
+                                                            >
+                                                                <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
+                                                            </div>
+                                                            <div
+                                                                className="crm-btn"
+                                                                title="Save"
+                                                                style={{
+                                                                    opacity: 0.5,
+                                                                    cursor: 'not-allowed',
+                                                                    backgroundColor: '#f5f5f5',
+                                                                    color: '#9e9e9e'
+                                                                }}
+                                                            >
+                                                                <Save fontSize="small" sx={{ color: '#000000' }} />
+                                                            </div>
+                                                            <div
+                                                                className="crm-btn"
+                                                                title="Delete"
+                                                                style={{
+                                                                    opacity: 0.5,
+                                                                    cursor: 'not-allowed',
+                                                                    backgroundColor: '#f5f5f5',
+                                                                    color: '#9e9e9e'
+                                                                }}
+                                                            >
+                                                                <Delete fontSize="small" sx={{ color: '#000000' }} />
+                                                            </div>
+                                                            <div
+                                                                className="crm-btn"
+                                                                title="Visit Details"
+                                                                style={{
+                                                                    cursor: 'not-allowed',
+                                                                    backgroundColor: '#f5f5f5',
+                                                                    color: '#9e9e9e',
+                                                                    border: '1px solid #CFD8DC',
+                                                                    opacity: 0.5
+                                                                }}
+                                                            >
+                                                                <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
+                                                            </div>
+                                                        </div>
+                                                        <div className="kv">
+                                                            <span className="k">Online:</span>
+                                                            <span className="v">
+                                                                <input
+                                                                    type="text"
+                                                                    className="form-control form-control-sm"
+                                                                    placeholder="HH:mm"
+                                                                    value={appointment.online}
+                                                                    onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
+                                                                    disabled={normalizeStatusLabel(appointment.status) !== 'WAITING'}
+                                                                    title={normalizeStatusLabel(appointment.status) !== 'WAITING' ? "Only editable when status is WAITING" : ""}
+                                                                    style={{
+                                                                        width: '80px',
+                                                                        height: '28px',
+                                                                        padding: '2px 6px',
+                                                                        display: 'inline-block',
+                                                                        cursor: normalizeStatusLabel(appointment.status) !== 'WAITING' ? 'not-allowed' : 'text',
+                                                                        backgroundColor: normalizeStatusLabel(appointment.status) !== 'WAITING' ? '#f5f5f5' : '#ffffff'
+                                                                    }}
+                                                                />
+                                                            </span>
+                                                        </div>
+                                                        <div
+                                                            className="crm-btn ms-auto"
+                                                            title={(() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                return isEnabled ? "Treatment" : "Treatment";
+                                                            })()}
+                                                            onClick={() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                if (isEnabled) {
+                                                                    // Treatment button functionality - can be implemented as needed
+                                                                    console.log('Treatment clicked for patient:', appointment.patientId);
+                                                                    navigate('/treatment', {
+                                                                        state: {
+                                                                            patientId: appointment.patientId,
+                                                                            patientName: appointment.patient,
+                                                                            visitNumber: appointment.visitNumber,
+                                                                            doctorId: appointment.doctorId,
+                                                                            clinicId: clinicId,
+                                                                            shiftId: Number(appointment.shiftId || 1),
+                                                                            visitDate: String(appointment.visitDate || ''),
+                                                                            appointmentId: appointment.appointmentId,
+                                                                            age: appointment.age,
+                                                                            gender: appointment.gender,
+                                                                            contact: appointment.contact,
+                                                                            status: appointment.status,
+                                                                            statusId: mapStatusLabelToId(appointment.status),
+                                                                            referralName: appointment.referralName, referralCode: appointment.referBy
+                                                                        }
+                                                                    });
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                cursor: (() => {
                                                                     const statusId = mapStatusLabelToId(appointment.status);
                                                                     const normalizedStatus = normalizeStatusLabel(appointment.status);
                                                                     const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
-                                                                    return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
+                                                                    return isEnabled ? 'pointer' : 'not-allowed';
+                                                                })(),
+                                                                backgroundColor: (() => {
+                                                                    const statusId = mapStatusLabelToId(appointment.status);
+                                                                    const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                    return isEnabled ? '#ECEFF1' : '#F5F5F5';
+                                                                })(),
+                                                                color: (() => {
+                                                                    const statusId = mapStatusLabelToId(appointment.status);
+                                                                    const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                    return isEnabled ? '#607D8B' : '#BDBDBD';
+                                                                })(),
+                                                                border: (() => {
+                                                                    const statusId = mapStatusLabelToId(appointment.status);
+                                                                    const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                    return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
+                                                                })(),
+                                                                opacity: (() => {
+                                                                    const statusId = mapStatusLabelToId(appointment.status);
+                                                                    const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                    return isEnabled ? 1 : 0.5;
                                                                 })()
                                                             }}
-                                                        />
+                                                        >
+                                                            <img
+                                                                src="/images/avatar/Treatment.svg"
+                                                                alt="Treatment"
+                                                                style={{
+                                                                    width: 16,
+                                                                    height: 16,
+                                                                    filter: (() => {
+                                                                        const statusId = mapStatusLabelToId(appointment.status);
+                                                                        const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                        return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
+                                                                    })()
+                                                                }}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                        );
+                                    })}
+                                </div>
+                            )}
 
-                        {/* Pagination - Same as receptionist */}
-                        {filteredAppointments.length > 0 && (
-                            <div className="pagination-container">
-                                <div className="pagination-info">
-                                    <span>
-                                        Showing {startIndex + 1} to {Math.min(endIndex, filteredAppointments.length)} of {filteredAppointments.length} appointments
-                                    </span>
-                                    <div className="page-size-selector">
-                                        <span>Show:</span>
-                                        <select
-                                            className="page-size-select"
-                                            value={pageSize}
-                                            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                            {/* Pagination - Same as receptionist */}
+                            {filteredAppointments.length > 0 && (
+                                <div className="pagination-container">
+                                    <div className="pagination-info">
+                                        <span>
+                                            Showing {startIndex + 1} to {Math.min(endIndex, filteredAppointments.length)} of {filteredAppointments.length} appointments
+                                        </span>
+                                        <div className="page-size-selector">
+                                            <span>Show:</span>
+                                            <select
+                                                className="page-size-select"
+                                                value={pageSize}
+                                                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                            >
+                                                <option value={5}>5</option>
+                                                <option value={10}>10</option>
+                                                <option value={20}>20</option>
+                                                <option value={50}>50</option>
+                                            </select>
+                                            <span style={{ whiteSpace: 'nowrap' }}>per page</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="pagination-controls">
+                                        <button
+                                            className="page-btn nav-btn"
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 1}
                                         >
-                                            <option value={5}>5</option>
-                                            <option value={10}>10</option>
-                                            <option value={20}>20</option>
-                                            <option value={50}>50</option>
-                                        </select>
-                                        <span style={{ whiteSpace: 'nowrap' }}>per page</span>
+                                            Previous
+                                        </button>
+
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                            if (
+                                                page === 1 ||
+                                                page === totalPages ||
+                                                (page >= currentPage - 1 && page <= currentPage + 1)
+                                            ) {
+                                                return (
+                                                    <button
+                                                        key={page}
+                                                        className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                                                        onClick={() => handlePageChange(page)}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                );
+                                            } else if (
+                                                page === currentPage - 2 ||
+                                                page === currentPage + 2
+                                            ) {
+                                                return <span key={page} className="page-btn" style={{ border: 'none', background: 'none' }}>...</span>;
+                                            }
+                                            return null;
+                                        })}
+
+                                        <button
+                                            className="page-btn nav-btn"
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            Next
+                                        </button>
                                     </div>
                                 </div>
+                            )}
+                        </>
+                    )}
 
-                                <div className="pagination-controls">
-                                    <button
-                                        className="page-btn nav-btn"
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        disabled={currentPage === 1}
-                                    >
-                                        Previous
-                                    </button>
+                    {/* Quick Registration Form Modal (Doctor screen) */}
+                    {showQuickRegistration && selectedPatientForQuickReg && (
+                        <AddPatientPage
+                            open={showQuickRegistration}
+                            onClose={() => {
+                                setShowQuickRegistration(false);
+                                setSelectedPatientForQuickReg(null);
+                            }}
+                            patientId={selectedPatientForQuickReg.patientId}
+                            readOnly={true}
+                            doctorId={doctorId}
+                            clinicId={clinicId}
+                        />
+                    )}
 
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                                        if (
-                                            page === 1 ||
-                                            page === totalPages ||
-                                            (page >= currentPage - 1 && page <= currentPage + 1)
-                                        ) {
-                                            return (
-                                                <button
-                                                    key={page}
-                                                    className={`page-btn ${currentPage === page ? 'active' : ''}`}
-                                                    onClick={() => handlePageChange(page)}
-                                                >
-                                                    {page}
-                                                </button>
-                                            );
-                                        } else if (
-                                            page === currentPage - 2 ||
-                                            page === currentPage + 2
-                                        ) {
-                                            return <span key={page} className="page-btn" style={{ border: 'none', background: 'none' }}>...</span>;
-                                        }
-                                        return null;
-                                    })}
-
-                                    <button
-                                        className="page-btn nav-btn"
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        Next
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </>
-                )}
-
-                {/* Quick Registration Form Modal (Doctor screen) */}
-                {showQuickRegistration && selectedPatientForQuickReg && (
-                    <AddPatientPage
-                        open={showQuickRegistration}
-                        onClose={() => {
-                            setShowQuickRegistration(false);
-                            setSelectedPatientForQuickReg(null);
-                        }}
-                        patientId={selectedPatientForQuickReg.patientId}
-                        readOnly={true}
-                        doctorId={doctorId}
-                        clinicId={clinicId}
-                    />
-                )}
-
-                {/* Patient Form Dialog (Doctor screen) */}
-                {showPatientFormDialog && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            zIndex: 9999,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '20px'
-                        }}
-                        onClick={(e) => {
-                            if (e.target === e.currentTarget) {
-                                setShowPatientFormDialog(false);
-                            }
-                        }}
-                    >
+                    {/* Patient Form Dialog (Doctor screen) */}
+                    {showPatientFormDialog && (
                         <div
                             style={{
-                                backgroundColor: 'white',
-                                borderRadius: '8px',
-                                width: '1100vw',
-                                maxWidth: '1500px',
-                                maxHeight: '85vh',
-                                overflow: 'auto',
-                                position: 'relative'
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                zIndex: 9999,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '20px'
                             }}
                             onClick={(e) => {
-                                e.stopPropagation();
+                                if (e.target === e.currentTarget) {
+                                    setShowPatientFormDialog(false);
+                                }
                             }}
                         >
-                            <PatientFormTest
-                                onClose={() => setShowPatientFormDialog(false)}
-                                initialData={formPatientData || undefined}
-                                visitDates={visitDates}
-                                currentVisitIndex={currentVisitIndex}
-                                onVisitDateChange={handleVisitDateChange}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* Snackbar for search results */}
-                {showSnackbar && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            bottom: '20px',
-                            right: '20px',
-                            backgroundColor: (
-                                snackbarMessage.toLowerCase().includes("failed") ||
-                                snackbarMessage.toLowerCase().includes("error") ||
-                                snackbarMessage.toLowerCase().includes("unable") ||
-                                snackbarMessage.toLowerCase().includes("invalid") ||
-                                snackbarMessage.toLowerCase().includes("missing") ||
-                                snackbarMessage.toLowerCase().includes("required") ||
-                                snackbarMessage.toLowerCase().includes("already") ||
-                                snackbarMessage.toLowerCase().includes("conflict") ||
-                                snackbarMessage.toLowerCase().includes("doesn't have") ||
-                                snackbarMessage.toLowerCase().includes("not found") ||
-                                snackbarMessage.toLowerCase().includes("failed to") ||
-                                snackbarMessage.toLowerCase().includes("please select") ||
-                                snackbarMessage.toLowerCase().includes("at least one lab test") ||
-                                snackbarMessage.toLowerCase().includes("required fields") ||
-                                snackbarMessage.toLowerCase().includes("value for each result")
-                            ) ? '#d32f2f' : '#2e7d32',
-                            color: 'white',
-                            padding: '12px 20px',
-                            borderRadius: '6px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                            zIndex: 9999,
-                            fontFamily: "'Roboto', sans-serif",
-                            fontWeight: 500,
-                            fontSize: '0.9rem',
-                            maxWidth: '400px',
-                            animation: 'slideInUp 0.3s ease-out'
-                        }}
-                    >
-                        <div className="d-flex align-items-center">
-                            <i className={`fas ${(
-                                snackbarMessage.toLowerCase().includes("failed") ||
-                                snackbarMessage.toLowerCase().includes("error") ||
-                                snackbarMessage.toLowerCase().includes("unable") ||
-                                snackbarMessage.toLowerCase().includes("invalid") ||
-                                snackbarMessage.toLowerCase().includes("missing") ||
-                                snackbarMessage.toLowerCase().includes("required") ||
-                                snackbarMessage.toLowerCase().includes("already") ||
-                                snackbarMessage.toLowerCase().includes("conflict") ||
-                                snackbarMessage.toLowerCase().includes("doesn't have") ||
-                                snackbarMessage.toLowerCase().includes("not found") ||
-                                snackbarMessage.toLowerCase().includes("failed to") ||
-                                snackbarMessage.toLowerCase().includes("please select") ||
-                                snackbarMessage.toLowerCase().includes("at least one lab test") ||
-                                snackbarMessage.toLowerCase().includes("required fields") ||
-                                snackbarMessage.toLowerCase().includes("value for each result")
-                            ) ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
-                            <span>{snackbarMessage}</span>
-                            <button
-                                onClick={() => setShowSnackbar(false)}
+                            <div
                                 style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'white',
-                                    fontSize: '1.2rem',
-                                    marginLeft: '10px',
-                                    cursor: 'pointer',
-                                    opacity: 0.8
+                                    backgroundColor: 'white',
+                                    borderRadius: '8px',
+                                    width: '1100vw',
+                                    maxWidth: '1500px',
+                                    maxHeight: '85vh',
+                                    overflow: 'auto',
+                                    position: 'relative'
+                                }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
                                 }}
                             >
-                                ×
-                            </button>
+                                <PatientFormTest
+                                    onClose={() => setShowPatientFormDialog(false)}
+                                    initialData={formPatientData || undefined}
+                                    visitDates={visitDates}
+                                    currentVisitIndex={currentVisitIndex}
+                                    onVisitDateChange={handleVisitDateChange}
+                                />
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        );
-    };
+                    )}
+
+                    {/* Snackbar for search results */}
+                    {showSnackbar && (
+                        <div
+                            style={{
+                                position: 'fixed',
+                                bottom: '20px',
+                                right: '20px',
+                                backgroundColor: (
+                                    snackbarMessage.toLowerCase().includes("failed") ||
+                                    snackbarMessage.toLowerCase().includes("error") ||
+                                    snackbarMessage.toLowerCase().includes("unable") ||
+                                    snackbarMessage.toLowerCase().includes("invalid") ||
+                                    snackbarMessage.toLowerCase().includes("missing") ||
+                                    snackbarMessage.toLowerCase().includes("required") ||
+                                    snackbarMessage.toLowerCase().includes("already") ||
+                                    snackbarMessage.toLowerCase().includes("conflict") ||
+                                    snackbarMessage.toLowerCase().includes("doesn't have") ||
+                                    snackbarMessage.toLowerCase().includes("not found") ||
+                                    snackbarMessage.toLowerCase().includes("failed to") ||
+                                    snackbarMessage.toLowerCase().includes("please select") ||
+                                    snackbarMessage.toLowerCase().includes("at least one lab test") ||
+                                    snackbarMessage.toLowerCase().includes("required fields") ||
+                                    snackbarMessage.toLowerCase().includes("value for each result")
+                                ) ? '#d32f2f' : '#2e7d32',
+                                color: 'white',
+                                padding: '12px 20px',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                zIndex: 9999,
+                                fontFamily: "'Roboto', sans-serif",
+                                fontWeight: 500,
+                                fontSize: '0.9rem',
+                                maxWidth: '400px',
+                                animation: 'slideInUp 0.3s ease-out'
+                            }}
+                        >
+                            <div className="d-flex align-items-center">
+                                <i className={`fas ${(
+                                    snackbarMessage.toLowerCase().includes("failed") ||
+                                    snackbarMessage.toLowerCase().includes("error") ||
+                                    snackbarMessage.toLowerCase().includes("unable") ||
+                                    snackbarMessage.toLowerCase().includes("invalid") ||
+                                    snackbarMessage.toLowerCase().includes("missing") ||
+                                    snackbarMessage.toLowerCase().includes("required") ||
+                                    snackbarMessage.toLowerCase().includes("already") ||
+                                    snackbarMessage.toLowerCase().includes("conflict") ||
+                                    snackbarMessage.toLowerCase().includes("doesn't have") ||
+                                    snackbarMessage.toLowerCase().includes("not found") ||
+                                    snackbarMessage.toLowerCase().includes("failed to") ||
+                                    snackbarMessage.toLowerCase().includes("please select") ||
+                                    snackbarMessage.toLowerCase().includes("at least one lab test") ||
+                                    snackbarMessage.toLowerCase().includes("required fields") ||
+                                    snackbarMessage.toLowerCase().includes("value for each result")
+                                ) ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
+                                <span>{snackbarMessage}</span>
+                                <button
+                                    onClick={() => setShowSnackbar(false)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'white',
+                                        fontSize: '1.2rem',
+                                        marginLeft: '10px',
+                                        cursor: 'pointer',
+                                        opacity: 0.8
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+    }, [
+        loadingSessionData, loadingDoctors, loadingStatuses, loadingAppointments, sessionData, allDoctors,
+        showRefreshNotification, searchTerm, searchError, showDropdown, searchMenuPosition, loading,
+        searchResults, selectedPatients, filterStatus, activeView, statusCounts, currentPage, pageSize,
+        showQuickRegistration, selectedPatientForQuickReg, showPatientFormDialog, formPatientData,
+        visitDates, currentVisitIndex, showSnackbar, snackbarMessage, doctorFirstName, doctorId, clinicId,
+        handleSearchChange, handleListClick, handlePageChange, handleVisitDateChange,
+        setShowQuickRegistration, setSelectedPatientForQuickReg, setShowPatientFormDialog,
+        setShowSnackbar, searchInputRef, searchRef
+    ]);
+
 
     // Conditional rendering based on user role
     if (isDoctor) {
