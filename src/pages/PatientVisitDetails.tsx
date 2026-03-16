@@ -2954,7 +2954,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             color: 'black',
                                                             fontSize: '12px',
                                                             width: '30%',
-                                                            verticalAlign: 'top'
+                                                            verticalAlign: 'top',
+                                                            wordWrap: 'break-word',
+                                                            wordBreak: 'break-word',
+                                                            whiteSpace: 'normal'
                                                         }}>
                                                             {row.label}
                                                         </td>
