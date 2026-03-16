@@ -3409,8 +3409,6 @@ export default function Treatment() {
                 });
             }
 
-            setSnackbarMessage('Investigation added successfully!');
-            setSnackbarOpen(true);
             setInvestigationsError(null);
             return true;
         } catch (error: any) {
