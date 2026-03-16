@@ -313,11 +313,11 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                         </Grid>
                         <Grid item xs={12}>
                             <Box sx={{ mb: 2 }}>
-                                <Grid container spacing={1} alignItems="flex-end">
+                                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }} className="mb-0">
+                                    Parameter Name <span style={{ color: 'red' }}>*</span>
+                                </Typography>
+                                <Grid container spacing={1} alignItems="flex-start">
                                     <Grid item xs>
-                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }} className="mb-0">
-                                            Parameter Name <span style={{ color: 'red' }}>*</span>
-                                        </Typography>
                                         <ClearableTextField
                                             fullWidth
                                             placeholder="Parameter Name"
